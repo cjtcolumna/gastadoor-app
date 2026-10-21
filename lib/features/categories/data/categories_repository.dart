@@ -35,6 +35,7 @@ class CategoriesRepository {
                 'name': c.name,
                 'kind': c.kind.name,
                 'icon': c.icon,
+                'color': c.color,
               },
           ],
           onConflict: 'user_id,kind,name',

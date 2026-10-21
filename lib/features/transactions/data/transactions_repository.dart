@@ -34,7 +34,7 @@ class TransactionsRepository {
     final (from, to) = TransactionPage.rowRange(page, pageSize: pageSize);
     final response = await _client
         .from('transactions')
-        .select('*, accounts(name), categories(name, icon)')
+        .select('*, accounts(name), categories(name, icon, color)')
         .order('occurred_on', ascending: false)
         .order('created_at', ascending: false)
         .range(from, to)

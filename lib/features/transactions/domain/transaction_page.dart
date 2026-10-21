@@ -8,17 +8,19 @@ class TransactionListItem {
     required this.accountName,
     this.categoryName,
     this.categoryIcon,
+    this.categoryColor,
   });
 
   final Transaction transaction;
   final String accountName;
   final String? categoryName;
 
-  /// An emoji like '🍔', or null.
+  /// Icon and color names, e.g. 'restaurant' and 'orange', or null.
   final String? categoryIcon;
+  final String? categoryColor;
 
   /// Builds an item from a Supabase row that includes
-  /// `accounts(name)` and `categories(name, icon)`.
+  /// `accounts(name)` and `categories(name, icon, color)`.
   factory TransactionListItem.fromRow(Map<String, dynamic> row) {
     final account = row['accounts'] as Map<String, dynamic>?;
     final category = row['categories'] as Map<String, dynamic>?;
@@ -27,6 +29,7 @@ class TransactionListItem {
       accountName: account?['name'] as String? ?? 'Unknown account',
       categoryName: category?['name'] as String?,
       categoryIcon: category?['icon'] as String?,
+      categoryColor: category?['color'] as String?,
     );
   }
 }

@@ -12,6 +12,8 @@ declare
   acct uuid;
   cat_ids uuid[];
   names text[] := array['Food', 'Transport', 'Bills', 'Shopping', 'Coffee'];
+  icons text[] := array['restaurant', 'bus', 'receipt', 'shopping', 'cafe'];
+  colors text[] := array['orange', 'blue', 'amber', 'pink', 'brown'];
   notes text[] := array['Jollibee', 'Grab', 'Meralco', 'Shopee', 'Starbucks'];
   i int;
 begin
@@ -27,8 +29,8 @@ begin
   end if;
 
   -- A few expense categories (skipped if they already exist).
-  insert into public.categories (user_id, name, kind)
-  select me, n, 'expense' from unnest(names) as n
+  insert into public.categories (user_id, name, kind, icon, color)
+  select me, n, 'expense', i, col from unnest(names, icons, colors) as t(n, i, col)
   on conflict (user_id, kind, name) do nothing;
 
   select array_agg(id order by name) into cat_ids

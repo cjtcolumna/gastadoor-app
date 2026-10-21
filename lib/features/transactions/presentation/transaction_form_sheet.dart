@@ -9,7 +9,7 @@ import '../../accounts/domain/account.dart';
 import '../../accounts/presentation/account_type_ui.dart';
 import '../../categories/data/categories_repository.dart';
 import '../../categories/domain/category.dart';
-import '../../categories/domain/default_categories.dart';
+import '../../categories/presentation/category_visuals.dart';
 import '../data/transaction_actions.dart';
 import '../domain/transaction.dart';
 import '../domain/transaction_draft.dart';
@@ -315,6 +315,7 @@ class _CategoryPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     if (categories.isEmpty) {
       return const Text('Loading categories…');
     }
@@ -324,7 +325,12 @@ class _CategoryPicker extends StatelessWidget {
       children: [
         for (final category in categories)
           ChoiceChip(
-            avatar: Text(category.icon ?? fallbackCategoryIcon),
+            avatar: Icon(
+              categoryIconFor(category.icon),
+              color: categoryColorFor(category.color, colors),
+            ),
+            // Keep the icon visible when selected (no check mark over it).
+            showCheckmark: false,
             label: Text(category.name),
             selected: category.id == selectedId,
             onSelected: onChanged == null

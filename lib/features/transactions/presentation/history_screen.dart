@@ -6,6 +6,7 @@ import '../../../core/utils/money.dart';
 import '../../../core/widgets/screen_padding.dart';
 import '../data/transactions_repository.dart';
 import '../domain/transaction.dart';
+import '../../categories/presentation/category_visuals.dart';
 import '../domain/transaction_page.dart';
 import 'transaction_form_sheet.dart';
 
@@ -96,18 +97,20 @@ class _TransactionTile extends StatelessWidget {
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: CircleAvatar(
-        backgroundColor: isExpense
-            ? colors.errorContainer
-            : colors.primaryContainer,
-        foregroundColor: isExpense
-            ? colors.onErrorContainer
-            : colors.onPrimaryContainer,
-        // The category's emoji, or an arrow if there's no category.
-        child: item.categoryIcon != null
-            ? Text(item.categoryIcon!, style: const TextStyle(fontSize: 20))
-            : Icon(isExpense ? Icons.arrow_upward : Icons.arrow_downward),
-      ),
+      // The category's icon and color, or a plain arrow if there's none.
+      leading: item.categoryName != null
+          ? CategoryAvatar(icon: item.categoryIcon, color: item.categoryColor)
+          : CircleAvatar(
+              backgroundColor: isExpense
+                  ? colors.errorContainer
+                  : colors.primaryContainer,
+              foregroundColor: isExpense
+                  ? colors.onErrorContainer
+                  : colors.onPrimaryContainer,
+              child: Icon(
+                isExpense ? Icons.arrow_upward : Icons.arrow_downward,
+              ),
+            ),
       title: Text(title),
       subtitle: Text(
         details.join(' · '),

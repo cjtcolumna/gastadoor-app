@@ -42,14 +42,16 @@ const categories = [
     userId: 'u',
     name: 'Food',
     kind: TransactionKind.expense,
-    icon: '🍔',
+    icon: 'restaurant',
+    color: 'orange',
   ),
   Category(
     id: 'salary',
     userId: 'u',
     name: 'Salary',
     kind: TransactionKind.income,
-    icon: '💼',
+    icon: 'work',
+    color: 'green',
   ),
 ];
 
