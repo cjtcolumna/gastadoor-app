@@ -29,3 +29,8 @@ abstract class Account with _$Account {
   factory Account.fromJson(Map<String, dynamic> json) =>
       _$AccountFromJson(json);
 }
+
+extension AccountTypeDb on AccountType {
+  /// The text saved in the database, e.g. AccountType.eWallet -> 'e_wallet'.
+  String get dbValue => _$AccountTypeEnumMap[this]!;
+}

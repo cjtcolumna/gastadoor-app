@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/accounts/presentation/accounts_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../supabase/supabase_providers.dart';
@@ -36,6 +37,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/',
         name: 'home',
         builder: (context, state) => const HomeScreen(),
+        routes: [
+          // A child of home, so the Accounts page gets a back arrow to home.
+          GoRoute(
+            path: 'accounts',
+            name: 'accounts',
+            builder: (context, state) => const AccountsScreen(),
+          ),
+        ],
       ),
       GoRoute(
         path: '/login',

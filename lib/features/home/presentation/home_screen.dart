@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/money.dart';
+import '../../accounts/data/accounts_provider.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../transactions/data/transactions_repository.dart';
 
@@ -52,6 +54,7 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
           ),
+          if (signedIn) ...[const SizedBox(height: 16), const _AccountsCard()],
           if (!supabaseReady) ...[
             const SizedBox(height: 16),
             Card(
@@ -82,6 +85,27 @@ class _SignOutButton extends ConsumerWidget {
       tooltip: 'Sign out',
       icon: const Icon(Icons.logout),
       onPressed: () => ref.read(authRepositoryProvider).signOut(),
+    );
+  }
+}
+
+/// Shows how many accounts you have and opens the Accounts page.
+class _AccountsCard extends ConsumerWidget {
+  const _AccountsCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final count = ref.watch(accountsProvider).value?.length;
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        leading: const Icon(Icons.account_balance_wallet_outlined),
+        title: const Text('Accounts'),
+        subtitle: Text(count == null ? 'Cash, GCash, banks…' : '$count active'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => context.go('/accounts'),
+      ),
     );
   }
 }
