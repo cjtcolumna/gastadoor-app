@@ -109,11 +109,19 @@ class _AccountsList extends ConsumerWidget {
 
 /// "Archived (2)": a closed-by-default section listing archived accounts,
 /// each with a Restore button. Hidden when there are none.
-class _ArchivedSection extends ConsumerWidget {
+class _ArchivedSection extends ConsumerStatefulWidget {
   const _ArchivedSection();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ArchivedSection> createState() => _ArchivedSectionState();
+}
+
+class _ArchivedSectionState extends ConsumerState<_ArchivedSection> {
+  /// Whether the section is open, so the arrow can turn to match.
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
     final archived = ref.watch(archivedAccountsProvider).value ?? const [];
     if (archived.isEmpty) return const SizedBox.shrink();
     final balances = ref.watch(accountBalancesProvider).value ?? const {};
@@ -126,6 +134,14 @@ class _ArchivedSection extends ConsumerWidget {
           leading: const Icon(Icons.inventory_2_rounded),
           title: Text('Archived (${archived.length})'),
           subtitle: const Text('Not counted in your net worth'),
+          // Our own rounded arrow (Flutter's default one isn't rounded).
+          // It turns upside down when the section opens.
+          trailing: AnimatedRotation(
+            turns: _open ? 0.5 : 0,
+            duration: const Duration(milliseconds: 200),
+            child: const Icon(Icons.expand_more_rounded),
+          ),
+          onExpansionChanged: (open) => setState(() => _open = open),
           // No extra lines at the top/bottom when it opens.
           shape: const Border(),
           collapsedShape: const Border(),

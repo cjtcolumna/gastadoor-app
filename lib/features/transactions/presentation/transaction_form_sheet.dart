@@ -91,6 +91,8 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
       initialDate: _date,
       firstDate: DateTime(2000),
       lastDate: DateTime.now().add(const Duration(days: 365)),
+      // Calendar only: hides the pencil "type a date" button.
+      initialEntryMode: DatePickerEntryMode.calendarOnly,
     );
     if (picked != null) setState(() => _date = dateOnly(picked));
   }
@@ -277,15 +279,18 @@ class _KindSwitch extends StatelessWidget {
         ButtonSegment(
           value: TransactionKind.expense,
           label: Text('Expense'),
-          icon: Icon(Icons.arrow_upward_rounded),
+          // Same arrows as Home and History: ↗ money out, ↙ money in.
+          icon: Icon(Icons.north_east_rounded),
         ),
         ButtonSegment(
           value: TransactionKind.income,
           label: Text('Income'),
-          icon: Icon(Icons.arrow_downward_rounded),
+          icon: Icon(Icons.south_west_rounded),
         ),
       ],
       selected: {kind},
+      // Keep each side's own arrow when selected (no check mark swap).
+      showSelectedIcon: false,
       // Red when recording an expense, green for income.
       style: SegmentedButton.styleFrom(
         selectedBackgroundColor: kind == TransactionKind.expense

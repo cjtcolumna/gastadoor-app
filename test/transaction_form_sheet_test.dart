@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'chip_helpers.dart';
+
+import 'package:gastadoor/core/theme/app_theme.dart';
 import 'package:gastadoor/core/utils/dates.dart';
 import 'package:gastadoor/features/accounts/data/accounts_provider.dart';
 import 'package:gastadoor/features/accounts/domain/account.dart';
@@ -84,6 +88,7 @@ void main() {
           transactionActionsProvider.overrideWithValue(actions),
         ],
         child: MaterialApp(
+          theme: AppTheme.light(), // the real app theme
           home: Scaffold(
             body: Builder(
               builder: (context) => TextButton(
@@ -217,5 +222,27 @@ void main() {
     await tester.tap(find.widgetWithText(TextButton, 'Delete'));
     await tester.pumpAndSettle();
     expect(actions.deleted, ['txn-1']);
+  });
+
+  testWidgets('selected switch and chips keep their rounded icons', (
+    tester,
+  ) async {
+    await openSheet(tester);
+    await tapVisible(tester, find.text('Income'));
+    await tapVisible(tester, find.text('Salary'));
+    await tapVisible(tester, find.text('GCash'));
+
+    // No check marks replace the icons when something is selected.
+    // (Chips paint their check mark directly, so we check the setting.)
+    expect(checkmarksShown(tester, find.text('GCash')), isFalse);
+    expect(checkmarksShown(tester, find.text('Salary')), isFalse);
+    final kindSwitch = tester.widget<SegmentedButton<TransactionKind>>(
+      find.byType(SegmentedButton<TransactionKind>),
+    );
+    expect(kindSwitch.showSelectedIcon, isFalse);
+    // The Income arrow, Salary icon, and GCash icon are all still shown.
+    expect(find.byIcon(Icons.south_west_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.work_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.phone_iphone_rounded), findsOneWidget);
   });
 }

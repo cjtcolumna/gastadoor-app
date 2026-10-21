@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'chip_helpers.dart';
+
+import 'package:gastadoor/core/theme/app_theme.dart';
 import 'package:gastadoor/features/accounts/data/accounts_provider.dart';
 import 'package:gastadoor/features/accounts/domain/account.dart';
 import 'package:gastadoor/features/accounts/presentation/accounts_screen.dart';
@@ -78,7 +82,10 @@ void main() {
           accountBalancesProvider.overrideWith((ref) async => balances),
           archivedAccountsProvider.overrideWith((ref) async => archived),
         ],
-        child: const MaterialApp(home: AccountsScreen()),
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: const AccountsScreen(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -200,5 +207,24 @@ void main() {
   testWidgets('no archived section when nothing is archived', (tester) async {
     await pumpScreen(tester, [cash]);
     expect(find.textContaining('Archived ('), findsNothing);
+  });
+
+  testWidgets('archived section uses a rounded arrow', (tester) async {
+    await pumpScreen(tester, [cash], archived: [oldWallet]);
+    expect(find.byIcon(Icons.expand_more), findsNothing);
+    expect(find.byIcon(Icons.expand_more_rounded), findsOneWidget);
+  });
+
+  testWidgets('account type chips keep their icon when selected', (
+    tester,
+  ) async {
+    await pumpScreen(tester, [cash]);
+    await tester.tap(find.byTooltip('Add account'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('E-wallet'));
+    await tester.pumpAndSettle();
+
+    expect(checkmarksShown(tester, find.text('E-wallet')), isFalse);
+    expect(find.byIcon(Icons.phone_iphone_rounded), findsOneWidget);
   });
 }

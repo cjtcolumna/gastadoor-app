@@ -173,6 +173,10 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: Colors.white,
+        // A selected chip is shown by its tinted background, so its own
+        // rounded icon stays visible instead of Flutter's square check mark.
+        selectedColor: scheme.primaryContainer,
+        showCheckmark: false,
         side: BorderSide(color: appColors.border),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
@@ -181,6 +185,13 @@ class AppTheme {
           backgroundColor: Colors.white,
           side: BorderSide(color: appColors.border),
         ),
+        // If a segmented button ever shows a check mark, make it rounded.
+        selectedIcon: const Icon(Icons.check_rounded),
+      ),
+      // Back and close buttons in app bars use rounded icons too.
+      actionIconTheme: ActionIconThemeData(
+        backButtonIconBuilder: (_) => const Icon(Icons.arrow_back_rounded),
+        closeButtonIconBuilder: (_) => const Icon(Icons.close_rounded),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: Colors.white,
