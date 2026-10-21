@@ -13,10 +13,10 @@ extension AccountTypeUi on AccountType {
   };
 
   IconData get icon => switch (this) {
-    AccountType.cash => Icons.payments_outlined,
-    AccountType.bank => Icons.account_balance_outlined,
-    AccountType.creditCard => Icons.credit_card,
-    AccountType.eWallet => Icons.phone_iphone,
-    AccountType.other => Icons.wallet_outlined,
+    AccountType.cash => Icons.payments_rounded,
+    AccountType.bank => Icons.account_balance_rounded,
+    AccountType.creditCard => Icons.credit_card_rounded,
+    AccountType.eWallet => Icons.phone_iphone_rounded,
+    AccountType.other => Icons.wallet_rounded,
   };
 }

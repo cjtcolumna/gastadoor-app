@@ -25,7 +25,7 @@ class AccountsScreen extends ConsumerWidget {
         actions: [
           IconButton(
             tooltip: 'Add account',
-            icon: const Icon(Icons.add_circle_outline),
+            icon: const Icon(Icons.add_circle_outline_rounded),
             onPressed: () => showAccountFormSheet(context),
           ),
         ],
@@ -123,7 +123,7 @@ class _ArchivedSection extends ConsumerWidget {
       child: Card(
         clipBehavior: Clip.antiAlias,
         child: ExpansionTile(
-          leading: const Icon(Icons.inventory_2_outlined),
+          leading: const Icon(Icons.inventory_2_rounded),
           title: Text('Archived (${archived.length})'),
           subtitle: const Text('Not counted in your net worth'),
           // No extra lines at the top/bottom when it opens.

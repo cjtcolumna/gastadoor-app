@@ -217,7 +217,7 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
               alignment: Alignment.centerLeft,
               child: OutlinedButton.icon(
                 onPressed: _saving ? null : _pickDate,
-                icon: const Icon(Icons.calendar_today_outlined, size: 18),
+                icon: const Icon(Icons.calendar_today_rounded, size: 18),
                 label: Text(friendlyDate(_date)),
               ),
             ),
@@ -277,12 +277,12 @@ class _KindSwitch extends StatelessWidget {
         ButtonSegment(
           value: TransactionKind.expense,
           label: Text('Expense'),
-          icon: Icon(Icons.arrow_upward),
+          icon: Icon(Icons.arrow_upward_rounded),
         ),
         ButtonSegment(
           value: TransactionKind.income,
           label: Text('Income'),
-          icon: Icon(Icons.arrow_downward),
+          icon: Icon(Icons.arrow_downward_rounded),
         ),
       ],
       selected: {kind},

@@ -133,7 +133,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       controller: _emailController,
       decoration: const InputDecoration(
         labelText: 'Email',
-        prefixIcon: Icon(Icons.mail_outline),
+        prefixIcon: Icon(Icons.mail_outline_rounded),
       ),
       keyboardType: TextInputType.emailAddress,
       autofillHints: const [AutofillHints.email],
@@ -149,11 +149,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       controller: _passwordController,
       decoration: InputDecoration(
         labelText: 'Password',
-        prefixIcon: const Icon(Icons.lock_outline),
+        prefixIcon: const Icon(Icons.lock_outline_rounded),
         suffixIcon: IconButton(
           tooltip: _hidePassword ? 'Show password' : 'Hide password',
           icon: Icon(
-            _hidePassword ? Icons.visibility_outlined : Icons.visibility_off,
+            _hidePassword
+                ? Icons.visibility_rounded
+                : Icons.visibility_off_rounded,
           ),
           onPressed: () => setState(() => _hidePassword = !_hidePassword),
         ),
@@ -191,7 +193,7 @@ class _Header extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
           ),
           child: Icon(
-            Icons.account_balance_wallet_outlined,
+            Icons.account_balance_wallet_rounded,
             size: 40,
             color: colors.onPrimaryContainer,
           ),

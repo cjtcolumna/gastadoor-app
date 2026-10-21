@@ -103,7 +103,7 @@ class _AddButton extends StatelessWidget {
         onPressed: onPressed,
         iconSize: 30,
         style: IconButton.styleFrom(fixedSize: const Size.square(64)),
-        icon: const Icon(Icons.add),
+        icon: const Icon(Icons.add_rounded),
       ),
     );
   }

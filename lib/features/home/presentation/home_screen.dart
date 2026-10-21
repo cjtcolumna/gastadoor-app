@@ -131,7 +131,7 @@ class _MonthSummary extends ConsumerWidget {
           child: _SummaryTile(
             label: 'Income · $month',
             cents: totals.incomeCents,
-            icon: Icons.south_west,
+            icon: Icons.south_west_rounded,
             color: colors.income,
             softColor: colors.incomeSoft,
           ),
@@ -141,7 +141,7 @@ class _MonthSummary extends ConsumerWidget {
           child: _SummaryTile(
             label: 'Spent · $month',
             cents: totals.expenseCents,
-            icon: Icons.north_east,
+            icon: Icons.north_east_rounded,
             color: colors.expense,
             softColor: colors.expenseSoft,
           ),
@@ -287,7 +287,7 @@ class _SetupHint extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Card(
       child: ListTile(
-        leading: Icon(Icons.info_outline),
+        leading: Icon(Icons.info_outline_rounded),
         title: Text('Supabase is not configured'),
         subtitle: Text(
           'Copy env.example.json to env.json, add your project URL '
@@ -306,7 +306,7 @@ class _SignOutButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return IconButton(
       tooltip: 'Sign out',
-      icon: const Icon(Icons.logout),
+      icon: const Icon(Icons.logout_rounded),
       onPressed: () => ref.read(authRepositoryProvider).signOut(),
     );
   }

@@ -142,7 +142,9 @@ class _TransactionTile extends StatelessWidget {
           : CircleAvatar(
               backgroundColor: isExpense ? money.expenseSoft : money.incomeSoft,
               foregroundColor: isExpense ? money.expense : money.income,
-              child: Icon(isExpense ? Icons.north_east : Icons.south_west),
+              child: Icon(
+                isExpense ? Icons.north_east_rounded : Icons.south_west_rounded,
+              ),
             ),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
       subtitle: Text(
@@ -185,7 +187,7 @@ class _PaginationBar extends StatelessWidget {
               onPressed: page.hasPrevious
                   ? () => onPageChanged(page.page - 1)
                   : null,
-              icon: const Icon(Icons.chevron_left),
+              icon: const Icon(Icons.chevron_left_rounded),
               label: const Text('Prev'),
             ),
             Expanded(
@@ -199,7 +201,7 @@ class _PaginationBar extends StatelessWidget {
               onPressed: page.hasNext
                   ? () => onPageChanged(page.page + 1)
                   : null,
-              icon: const Icon(Icons.chevron_right),
+              icon: const Icon(Icons.chevron_right_rounded),
               iconAlignment: IconAlignment.end, // icon after the word
               label: const Text('Next'),
             ),
@@ -227,7 +229,7 @@ class _EmptyState extends StatelessWidget {
       padding: const EdgeInsets.all(32),
       children: const [
         SizedBox(height: 80),
-        Icon(Icons.receipt_long_outlined, size: 48),
+        Icon(Icons.receipt_long_rounded, size: 48),
         SizedBox(height: 12),
         Text(
           'No expenses yet.\nTap + below to add your first one.',

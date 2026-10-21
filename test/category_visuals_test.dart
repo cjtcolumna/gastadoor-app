@@ -14,13 +14,13 @@ void main() {
   });
 
   test('known names turn into Flutter icons and colors', () {
-    expect(categoryIconFor('restaurant'), Icons.restaurant);
+    expect(categoryIconFor('restaurant'), Icons.restaurant_rounded);
     expect(categoryColorFor('orange', scheme), const Color(0xFFEF6C00));
   });
 
   test('unknown names, old emojis, and null get safe fallbacks', () {
-    expect(categoryIconFor('🍔'), Icons.label_outline);
-    expect(categoryIconFor(null), Icons.label_outline);
+    expect(categoryIconFor('🍔'), Icons.label_outline_rounded);
+    expect(categoryIconFor(null), Icons.label_outline_rounded);
     expect(categoryColorFor('sparkly', scheme), scheme.primary);
     expect(categoryColorFor(null, scheme), scheme.primary);
   });

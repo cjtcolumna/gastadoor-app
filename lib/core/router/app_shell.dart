@@ -5,16 +5,20 @@ import '../../features/transactions/presentation/transaction_form_sheet.dart';
 import '../widgets/floating_nav_bar.dart';
 
 const appTabs = [
-  NavTab(label: 'Home', icon: Icons.home_outlined, selectedIcon: Icons.home),
+  NavTab(
+    label: 'Home',
+    icon: Icons.home_rounded,
+    selectedIcon: Icons.home_rounded,
+  ),
   NavTab(
     label: 'Accounts',
-    icon: Icons.account_balance_wallet_outlined,
-    selectedIcon: Icons.account_balance_wallet,
+    icon: Icons.account_balance_wallet_rounded,
+    selectedIcon: Icons.account_balance_wallet_rounded,
   ),
   NavTab(
     label: 'History',
-    icon: Icons.receipt_long_outlined,
-    selectedIcon: Icons.receipt_long,
+    icon: Icons.receipt_long_rounded,
+    selectedIcon: Icons.receipt_long_rounded,
   ),
 ];
 
