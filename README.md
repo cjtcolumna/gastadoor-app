@@ -98,6 +98,10 @@ flutter test
 
 Generated files (`*.freezed.dart`, `*.g.dart`) are committed so the app runs straight after `flutter pub get`.
 
+## Working with Claude Code
+
+This repo includes a Claude Code setup (`CLAUDE.md`, `.claude/`, `.mcp.json`) that lets Claude run git and Flutter commands safely and explain every change in beginner-friendly terms. See [docs/claude-code-setup.md](docs/claude-code-setup.md) for what each file does and how to turn on browser access.
+
 ## Database
 
 `supabase/migrations/20261021000000_initial_schema.sql` creates:
