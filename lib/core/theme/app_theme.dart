@@ -83,8 +83,9 @@ class AppTheme {
   /// The soft grey-white behind everything; cards sit on it in pure white.
   static const background = Color(0xFFF5F7F6);
 
-  /// The app's font: soft, rounded, friendly.
-  static const fontFamily = 'Nunito';
+  /// The app's font: modern and friendly, and stays sharp at small sizes.
+  /// Must match the `family:` name in pubspec.yaml.
+  static const fontFamily = 'PlusJakartaSans';
 
   static ThemeData light() {
     const appColors = AppColors.light;
@@ -97,7 +98,7 @@ class AppTheme {
     final base = ThemeData(
       colorScheme: scheme,
       useMaterial3: true,
-      // Every Text in the app uses Nunito unless it says otherwise.
+      // Every Text in the app uses this font unless it says otherwise.
       // The font files are bundled in assets/fonts (see pubspec.yaml).
       fontFamily: fontFamily,
     );
