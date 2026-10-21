@@ -1,6 +1,8 @@
 # GastaDoor: notes for Claude
 
-GastaDoor is a personal budget and spending tracker. It is an iOS-first Flutter app with a Supabase backend (Postgres + Auth). Android also builds, but iOS is what we test on.
+GastaDoor is a personal budget and spending tracker. It is an iOS-first Flutter app with a Supabase backend (Postgres + Auth).
+
+**Dev setup:** Jade works on a **Windows PC with VS Code** and has an **iPhone, but no Mac**. Day to day, test in Chrome on the PC, and on the iPhone through Safari (Flutter web served over the local Wi-Fi). Native iOS builds go through a cloud Mac build service (for example Codemagic) and TestFlight. Avoid features that only work natively on iOS until that pipeline is set up, or say clearly when something can't be tested on web.
 
 The owner, Jade, is a beginner who is **learning Flutter while vibe coding**. Teaching is part of every task. Read the "Teach me" section below before you change anything.
 
@@ -40,7 +42,9 @@ New features follow the same `domain / data / presentation` layout inside `lib/f
 
 ```sh
 flutter pub get                                   # install packages
-flutter run --dart-define-from-file=env.json      # run the app (simulator or phone)
+flutter run -d chrome --dart-define-from-file=env.json   # run the app in Chrome on the PC
+flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8080 --dart-define-from-file=env.json
+                                                  # then open http://<PC-IP>:8080 in iPhone Safari (same Wi-Fi)
 flutter test                                      # run all tests
 flutter analyze                                   # lint / static checks
 dart format lib test                              # format code
@@ -49,7 +53,7 @@ dart run build_runner build --delete-conflicting-outputs   # regenerate *.freeze
 
 - After changing any freezed model, run `build_runner` and commit the generated files too.
 - Before saying a task is done, run `flutter analyze` and `flutter test` and report the result honestly. If something fails, say what failed.
-- iOS builds only work on Jade's Mac with Xcode. In a cloud session without Flutter installed, say that you could not run the app instead of guessing.
+- There is no Mac, so native iOS builds can't run locally (Xcode is Mac-only). Use web for local testing. If Flutter isn't installed, or the app can't be run, say so instead of guessing.
 
 ## Conventions
 
