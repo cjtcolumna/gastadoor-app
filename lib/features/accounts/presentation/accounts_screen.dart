@@ -8,6 +8,7 @@ import '../domain/account.dart';
 import '../domain/balances.dart';
 import 'account_balance_tile.dart';
 import 'account_form_sheet.dart';
+import 'account_type_ui.dart';
 
 /// The Accounts tab: lists accounts (Cash, GCash, BDO...) and lets you
 /// add, edit, or archive them.
@@ -30,8 +31,9 @@ class AccountsScreen extends ConsumerWidget {
         ],
       ),
       body: accounts.when(
-        data: (list) =>
-            list.isEmpty ? const _EmptyState() : _AccountsList(accounts: list),
+        // Always show the list, so the Archived section is reachable
+        // even when every account is archived.
+        data: (list) => _AccountsList(accounts: list),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) =>
             _ErrorState(onRetry: () => ref.invalidate(accountsProvider)),
@@ -49,6 +51,13 @@ class _AccountsList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final balances = ref.watch(accountBalancesProvider).value ?? const {};
+
+    if (accounts.isEmpty) {
+      return ListView(
+        padding: screenPadding(context),
+        children: const [_EmptyState(), _ArchivedSection()],
+      );
+    }
 
     return ListView(
       padding: screenPadding(context),
@@ -92,7 +101,98 @@ class _AccountsList extends ConsumerWidget {
             ),
           ),
         ),
+        const _ArchivedSection(),
       ],
+    );
+  }
+}
+
+/// "Archived (2)": a closed-by-default section listing archived accounts,
+/// each with a Restore button. Hidden when there are none.
+class _ArchivedSection extends ConsumerWidget {
+  const _ArchivedSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final archived = ref.watch(archivedAccountsProvider).value ?? const [];
+    if (archived.isEmpty) return const SizedBox.shrink();
+    final balances = ref.watch(accountBalancesProvider).value ?? const {};
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: ExpansionTile(
+          leading: const Icon(Icons.inventory_2_outlined),
+          title: Text('Archived (${archived.length})'),
+          subtitle: const Text('Not counted in your net worth'),
+          // No extra lines at the top/bottom when it opens.
+          shape: const Border(),
+          collapsedShape: const Border(),
+          children: [
+            for (final account in archived) ...[
+              const Divider(height: 1),
+              _ArchivedTile(
+                account: account,
+                balanceCents: balanceOf(account, balances),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ArchivedTile extends ConsumerStatefulWidget {
+  const _ArchivedTile({required this.account, required this.balanceCents});
+
+  final Account account;
+  final int balanceCents;
+
+  @override
+  ConsumerState<_ArchivedTile> createState() => _ArchivedTileState();
+}
+
+class _ArchivedTileState extends ConsumerState<_ArchivedTile> {
+  bool _restoring = false;
+
+  Future<void> _restore() async {
+    setState(() => _restoring = true);
+    var failed = false;
+    try {
+      await ref.read(accountsProvider.notifier).restore(widget.account.id);
+    } catch (_) {
+      failed = true;
+    }
+    // Usually this row disappears after a restore; if it's still here,
+    // stop the spinner either way.
+    if (!mounted) return;
+    setState(() => _restoring = false);
+    if (failed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not restore. Try again.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: theme.colorScheme.surfaceContainerHighest,
+        foregroundColor: theme.colorScheme.onSurfaceVariant,
+        child: Icon(widget.account.type.icon, size: 22),
+      ),
+      title: Text(widget.account.name),
+      subtitle: Text(Money.format(widget.balanceCents)),
+      trailing: _restoring
+          ? const SizedBox.square(
+              dimension: 22,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            )
+          : TextButton(onPressed: _restore, child: const Text('Restore')),
     );
   }
 }

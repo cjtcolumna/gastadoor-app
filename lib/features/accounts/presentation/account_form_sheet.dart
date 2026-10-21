@@ -5,6 +5,7 @@ import '../../../core/utils/money.dart';
 import '../../../core/widgets/money_text_field.dart';
 import '../data/accounts_provider.dart';
 import '../domain/account.dart';
+import '../domain/balances.dart';
 import 'account_type_ui.dart';
 
 /// Opens the add/edit form as a panel that slides up from the bottom.
@@ -19,6 +20,23 @@ Future<void> showAccountFormSheet(BuildContext context, {Account? account}) {
     showDragHandle: true,
     builder: (_) => AccountFormSheet(account: account),
   );
+}
+
+/// The text in the "Archive this account?" dialog.
+/// Adds a warning when the balance isn't zero, because archived accounts
+/// don't count toward net worth.
+String archiveMessage(String name, int balanceCents) {
+  const base =
+      'It will be hidden from your accounts and from the + form. '
+      'Its past transactions stay in History, and you can restore it '
+      'any time from the Archived section.';
+  if (balanceCents == 0) return base;
+  final amount = Money.format(balanceCents.abs());
+  final warning = balanceCents > 0
+      ? '$name still has $amount. '
+      : '$name still owes $amount. ';
+  return '$warning'
+      'It will no longer count in your net worth.\n\n$base';
 }
 
 class AccountFormSheet extends ConsumerStatefulWidget {
@@ -92,7 +110,32 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
     });
   }
 
-  void _archive() => _run((accounts) => accounts.archive(widget.account!.id));
+  /// Asks first, and warns if the account still has money in it (or owes).
+  Future<void> _archive() async {
+    final account = widget.account!;
+    final balances = ref.read(accountBalancesProvider).value ?? const {};
+    final balance = balanceOf(account, balances);
+
+    final sure = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Archive ${account.name}?'),
+        content: Text(archiveMessage(account.name, balance)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Archive'),
+          ),
+        ],
+      ),
+    );
+    if (sure != true) return;
+    await _run((accounts) => accounts.archive(account.id));
+  }
 
   @override
   Widget build(BuildContext context) {

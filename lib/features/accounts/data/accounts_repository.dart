@@ -63,9 +63,24 @@ class AccountsRepository {
         .eq('id', account.id);
   }
 
+  /// Archived accounts, most recently changed first.
+  Future<List<Account>> fetchArchived() async {
+    final rows = await _client
+        .from('accounts')
+        .select()
+        .eq('archived', true)
+        .order('updated_at', ascending: false);
+    return rows.map(Account.fromJson).toList();
+  }
+
   /// Hides the account but keeps its history.
   Future<void> archive(String id) async {
     await _client.from('accounts').update({'archived': true}).eq('id', id);
+  }
+
+  /// Brings an archived account back.
+  Future<void> restore(String id) async {
+    await _client.from('accounts').update({'archived': false}).eq('id', id);
   }
 }
 

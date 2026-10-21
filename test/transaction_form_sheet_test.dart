@@ -70,6 +70,17 @@ void main() {
         overrides: [
           accountsProvider.overrideWith(FakeAccountsNotifier.new),
           categoriesProvider.overrideWith((ref) async => categories),
+          archivedAccountsProvider.overrideWith(
+            (ref) async => const [
+              Account(
+                id: 'old',
+                userId: 'u',
+                name: 'Old Wallet',
+                type: AccountType.eWallet,
+                archived: true,
+              ),
+            ],
+          ),
           transactionActionsProvider.overrideWithValue(actions),
         ],
         child: MaterialApp(
@@ -180,6 +191,18 @@ void main() {
     expect(id, 'txn-1');
     expect(draft.amountCents, 25000);
     expect(draft.accountId, 'gcash');
+  });
+
+  testWidgets('editing shows the archived account it came from', (
+    tester,
+  ) async {
+    final fromOldWallet = existing.copyWith(accountId: 'old');
+    await openSheet(tester, existing: fromOldWallet);
+
+    expect(find.text('Old Wallet (archived)'), findsOneWidget);
+    // Saving keeps it on the archived account.
+    await tapVisible(tester, save());
+    expect(actions.updated.single.$2.accountId, 'old');
   });
 
   testWidgets('deletes only after confirming', (tester) async {

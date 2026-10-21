@@ -67,6 +67,17 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
     super.dispose();
   }
 
+  /// If this transaction belongs to an account that's now archived,
+  /// returns that account so the form can still show it. Otherwise null.
+  Account? _archivedOriginal(List<Account> active) {
+    final originalId = widget.existing?.accountId;
+    if (originalId == null || active.any((a) => a.id == originalId)) {
+      return null;
+    }
+    final archived = ref.watch(archivedAccountsProvider).value ?? const [];
+    return archived.where((a) => a.id == originalId).firstOrNull;
+  }
+
   void _changeKind(TransactionKind kind) {
     setState(() {
       _kind = kind;
@@ -195,6 +206,7 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
             const _SectionLabel('Account'),
             _AccountPicker(
               accounts: accounts,
+              archivedAccount: _archivedOriginal(accounts),
               selectedId: accountId,
               onChanged: _saving
                   ? null
@@ -362,21 +374,34 @@ class _AccountPicker extends StatelessWidget {
     required this.accounts,
     required this.selectedId,
     required this.onChanged,
+    this.archivedAccount,
   });
 
   final List<Account> accounts;
   final String? selectedId;
   final ValueChanged<String>? onChanged;
 
+  /// When editing an old transaction from an archived account, that account,
+  /// shown as a greyed-out chip so you can see where the money came from.
+  final Account? archivedAccount;
+
   @override
   Widget build(BuildContext context) {
-    if (accounts.isEmpty) {
+    final archived = archivedAccount;
+    if (accounts.isEmpty && archived == null) {
       return const Text('No accounts yet. Add one in the Accounts tab.');
     }
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
+        if (archived != null)
+          ChoiceChip(
+            avatar: Icon(archived.type.icon, size: 18),
+            label: Text('${archived.name} (archived)'),
+            selected: archived.id == selectedId,
+            onSelected: null, // can't pick it for new money, only keep it
+          ),
         for (final account in accounts)
           ChoiceChip(
             avatar: Icon(account.type.icon, size: 18),

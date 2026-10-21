@@ -28,9 +28,23 @@ class FakeAccountsNotifier extends AccountsNotifier {
   @override
   Future<void> save(Account account) async => saved.add(account);
 
+  final archivedIds = <String>[];
+  final restoredIds = <String>[];
+
   @override
-  Future<void> archive(String id) async {}
+  Future<void> archive(String id) async => archivedIds.add(id);
+
+  @override
+  Future<void> restore(String id) async => restoredIds.add(id);
 }
+
+const oldWallet = Account(
+  id: '9',
+  userId: 'u',
+  name: 'Old Wallet',
+  type: AccountType.eWallet,
+  archived: true,
+);
 
 const cash = Account(
   id: '1',
@@ -54,6 +68,7 @@ void main() {
     WidgetTester tester,
     List<Account> start, {
     Map<String, int> balances = const {},
+    List<Account> archived = const [],
   }) async {
     fake = FakeAccountsNotifier(start);
     await tester.pumpWidget(
@@ -61,6 +76,7 @@ void main() {
         overrides: [
           accountsProvider.overrideWith(() => fake),
           accountBalancesProvider.overrideWith((ref) async => balances),
+          archivedAccountsProvider.overrideWith((ref) async => archived),
         ],
         child: const MaterialApp(home: AccountsScreen()),
       ),
@@ -134,5 +150,55 @@ void main() {
 
     expect(fake.saved.single.openingBalanceCents, -20000);
     expect(fake.saved.single.id, '2');
+  });
+
+  testWidgets('archiving asks first and warns about money owed', (
+    tester,
+  ) async {
+    await pumpScreen(tester, [cash, card]);
+    await tester.tap(find.text('BPI Card'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Archive account'));
+    await tester.tap(find.text('Archive account'));
+    await tester.pumpAndSettle();
+    expect(find.text('Archive BPI Card?'), findsOneWidget);
+    expect(find.textContaining('BPI Card still owes ₱120.50'), findsOneWidget);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(fake.archivedIds, isEmpty);
+
+    await tester.tap(find.text('Archive account'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'Archive'));
+    await tester.pumpAndSettle();
+    expect(fake.archivedIds, ['2']);
+  });
+
+  testWidgets('archived accounts can be restored', (tester) async {
+    await pumpScreen(tester, [cash], archived: [oldWallet]);
+
+    expect(find.text('Archived (1)'), findsOneWidget);
+    expect(find.text('Old Wallet'), findsNothing); // closed at first
+
+    await tester.tap(find.text('Archived (1)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Restore'));
+    await tester.pumpAndSettle();
+    expect(fake.restoredIds, ['9']);
+  });
+
+  testWidgets('archived section shows even when no accounts are active', (
+    tester,
+  ) async {
+    await pumpScreen(tester, [], archived: [oldWallet]);
+    expect(find.textContaining('No accounts yet'), findsOneWidget);
+    expect(find.text('Archived (1)'), findsOneWidget);
+  });
+
+  testWidgets('no archived section when nothing is archived', (tester) async {
+    await pumpScreen(tester, [cash]);
+    expect(find.textContaining('Archived ('), findsNothing);
   });
 }

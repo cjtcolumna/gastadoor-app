@@ -18,6 +18,16 @@ final accountBalancesProvider = FutureProvider<Map<String, int>>((ref) async {
   return ref.watch(accountsRepositoryProvider).fetchBalances();
 });
 
+/// Accounts the user archived. Reloads whenever the active list changes,
+/// so archiving or restoring updates both lists at once.
+final archivedAccountsProvider = FutureProvider<List<Account>>((ref) async {
+  await ref.watch(accountsProvider.future);
+  if (!ref.watch(supabaseReadyProvider)) return [];
+  final user = await ref.watch(currentUserProvider.future);
+  if (user == null) return [];
+  return ref.watch(accountsRepositoryProvider).fetchArchived();
+});
+
 class AccountsNotifier extends AsyncNotifier<List<Account>> {
   AccountsRepository get _repo => ref.read(accountsRepositoryProvider);
 
@@ -57,6 +67,11 @@ class AccountsNotifier extends AsyncNotifier<List<Account>> {
 
   Future<void> archive(String id) async {
     await _repo.archive(id);
+    await _reload();
+  }
+
+  Future<void> restore(String id) async {
+    await _repo.restore(id);
     await _reload();
   }
 
