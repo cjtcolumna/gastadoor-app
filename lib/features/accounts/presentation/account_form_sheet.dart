@@ -121,7 +121,6 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
               decoration: const InputDecoration(
                 labelText: 'Name',
                 hintText: 'e.g. GCash, BDO Savings',
-                border: OutlineInputBorder(),
               ),
               textCapitalization: TextCapitalization.words,
               maxLength: 80,

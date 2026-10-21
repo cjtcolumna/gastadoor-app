@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/supabase/supabase_providers.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/money.dart';
 import '../../../core/widgets/screen_padding.dart';
 import '../../accounts/data/accounts_provider.dart';
@@ -11,14 +12,16 @@ import '../../accounts/domain/balances.dart';
 import '../../accounts/presentation/account_balance_tile.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../transactions/data/transactions_repository.dart';
+import '../../transactions/domain/month_totals.dart';
 
-/// The Home tab: a dashboard with your net worth and each account's balance.
+/// The Home tab: a dashboard with your net worth, this month's income and
+/// spending, and each account's balance.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   Future<void> _refresh(WidgetRef ref) async {
     ref.invalidate(accountsProvider);
-    ref.invalidate(monthSpentCentsProvider);
+    ref.invalidate(monthTotalsProvider);
     await ref.read(accountBalancesProvider.future);
   }
 
@@ -39,7 +42,9 @@ class HomeScreen extends ConsumerWidget {
           padding: screenPadding(context),
           children: [
             const _NetWorthCard(),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
+            const _MonthSummary(),
+            const SizedBox(height: 28),
             const _AccountsSection(),
             if (!supabaseReady) ...[
               const SizedBox(height: 16),
@@ -52,29 +57,26 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-/// The big card at the top: net worth, plus this month's spending.
+/// The green card at the top with your net worth.
 class _NetWorthCard extends ConsumerWidget {
   const _NetWorthCard();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
     final accounts = ref.watch(accountsProvider).value ?? const [];
     final balances = ref.watch(accountBalancesProvider).value ?? const {};
-    final spent = ref.watch(monthSpentCentsProvider).value;
-    final month = DateFormat.MMMM().format(DateTime.now());
     final netWorth = netWorthCents(accounts, balances);
-    final onCard = colors.onPrimary;
+    const onCard = Colors.white;
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        gradient: LinearGradient(
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [colors.primary, colors.tertiary],
+          colors: [Color(0xFF256B4D), Color(0xFF3A9B6F)],
         ),
       ),
       child: Column(
@@ -82,11 +84,11 @@ class _NetWorthCard extends ConsumerWidget {
         children: [
           Text(
             'Net worth',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: onCard.withValues(alpha: 0.85),
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: onCard.withValues(alpha: 0.8),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
@@ -94,20 +96,114 @@ class _NetWorthCard extends ConsumerWidget {
               Money.format(netWorth),
               style: theme.textTheme.displaySmall?.copyWith(
                 color: onCard,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -1,
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 4),
           Text(
-            '${accounts.length} '
-            '${accounts.length == 1 ? 'account' : 'accounts'}'
-            '${spent == null ? '' : '  ·  Spent in $month: ${Money.format(spent)}'}',
+            'Across ${accounts.length} '
+            '${accounts.length == 1 ? 'account' : 'accounts'}',
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: onCard.withValues(alpha: 0.85),
+              color: onCard.withValues(alpha: 0.8),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Two small cards: money in (green) and money out (red) this month.
+class _MonthSummary extends ConsumerWidget {
+  const _MonthSummary();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.appColors;
+    final totals = ref.watch(monthTotalsProvider).value ?? MonthTotals.zero;
+    final month = DateFormat.MMMM().format(DateTime.now());
+
+    return Row(
+      children: [
+        Expanded(
+          child: _SummaryTile(
+            label: 'Income · $month',
+            cents: totals.incomeCents,
+            icon: Icons.south_west,
+            color: colors.income,
+            softColor: colors.incomeSoft,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _SummaryTile(
+            label: 'Spent · $month',
+            cents: totals.expenseCents,
+            icon: Icons.north_east,
+            color: colors.expense,
+            softColor: colors.expenseSoft,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SummaryTile extends StatelessWidget {
+  const _SummaryTile({
+    required this.label,
+    required this.cents,
+    required this.icon,
+    required this.color,
+    required this.softColor,
+  });
+
+  final String label;
+  final int cents;
+  final IconData icon;
+  final Color color;
+  final Color softColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: softColor,
+              child: Icon(icon, size: 18, color: color),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 2),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                Money.format(cents),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -140,6 +236,7 @@ class _AccountsSection extends ConsumerWidget {
             ),
           ],
         ),
+        const SizedBox(height: 4),
         accounts.when(
           data: (list) => list.isEmpty
               ? const Padding(
@@ -164,7 +261,7 @@ class _AccountsSection extends ConsumerWidget {
           ),
           error: (e, _) => Text(
             'Could not load your accounts.',
-            style: TextStyle(color: theme.colorScheme.error),
+            style: TextStyle(color: context.appColors.expense),
           ),
         ),
         if (balances.hasError)
@@ -174,7 +271,7 @@ class _AccountsSection extends ConsumerWidget {
               'Showing starting balances. Could not load current balances. '
               'Has the account_balances migration been run?',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.error,
+                color: context.appColors.expense,
               ),
             ),
           ),
@@ -188,9 +285,8 @@ class _SetupHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: Theme.of(context).colorScheme.secondaryContainer,
-      child: const ListTile(
+    return const Card(
+      child: ListTile(
         leading: Icon(Icons.info_outline),
         title: Text('Supabase is not configured'),
         subtitle: Text(

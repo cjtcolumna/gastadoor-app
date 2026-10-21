@@ -56,8 +56,9 @@ void main() {
     await pumpHistory(tester, 1);
 
     expect(find.text('Food'), findsOneWidget);
-    expect(find.text('Oct 21 · GCash · Expense #1'), findsOneWidget);
-    expect(find.text('− ₱189.00'), findsOneWidget);
+    expect(find.text('GCash · Expense #1'), findsOneWidget);
+    // Once on the row, once as the day's total in the date header.
+    expect(find.text('− ₱189.00'), findsNWidgets(2));
   });
 
   testWidgets('pages through 45 expenses, 20 at a time', (tester) async {
@@ -69,7 +70,7 @@ void main() {
 
     await tapNext(tester);
     // A new page starts at the top, showing expense #21 first.
-    expect(find.text('Oct 21 · GCash · Expense #21'), findsOneWidget);
+    expect(find.text('GCash · Expense #21'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Next'), 300);
     expect(find.text('Page 2 of 3'), findsOneWidget);
     expect(find.text('Showing 21–40 of 45'), findsOneWidget);

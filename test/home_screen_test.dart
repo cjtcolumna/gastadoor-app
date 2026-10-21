@@ -12,7 +12,10 @@ void main() {
 
       expect(find.text('GastaDoor'), findsOneWidget);
       expect(find.text('Net worth'), findsOneWidget);
-      expect(find.text('₱0.00'), findsOneWidget);
+      // Net worth, income this month, and spent this month are all zero.
+      expect(find.text('₱0.00'), findsNWidgets(3));
+      expect(find.textContaining('Income ·'), findsOneWidget);
+      expect(find.textContaining('Spent ·'), findsOneWidget);
       expect(find.text('Supabase is not configured'), findsOneWidget);
     },
   );

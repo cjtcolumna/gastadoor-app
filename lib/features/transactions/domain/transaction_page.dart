@@ -34,6 +34,24 @@ class TransactionListItem {
   }
 }
 
+/// Splits a newest-first list into days, keeping the order:
+/// [(Oct 22, [items...]), (Oct 21, [items...]), ...].
+List<(DateTime, List<TransactionListItem>)> groupByDay(
+  List<TransactionListItem> items,
+) {
+  final groups = <(DateTime, List<TransactionListItem>)>[];
+  for (final item in items) {
+    final d = item.transaction.occurredOn;
+    final day = DateTime(d.year, d.month, d.day);
+    if (groups.isNotEmpty && groups.last.$1 == day) {
+      groups.last.$2.add(item);
+    } else {
+      groups.add((day, [item]));
+    }
+  }
+  return groups;
+}
+
 /// One page of history: up to [pageSize] items, plus how many exist in total.
 class TransactionPage {
   const TransactionPage({

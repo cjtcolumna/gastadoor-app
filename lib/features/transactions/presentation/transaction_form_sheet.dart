@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dates.dart';
 import '../../../core/utils/money.dart';
 import '../../../core/widgets/money_text_field.dart';
@@ -215,7 +216,6 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
               decoration: const InputDecoration(
                 labelText: 'Note (optional)',
                 hintText: 'e.g. Jollibee with friends',
-                border: OutlineInputBorder(),
               ),
               maxLength: 500,
               textCapitalization: TextCapitalization.sentences,
@@ -274,6 +274,15 @@ class _KindSwitch extends StatelessWidget {
         ),
       ],
       selected: {kind},
+      // Red when recording an expense, green for income.
+      style: SegmentedButton.styleFrom(
+        selectedBackgroundColor: kind == TransactionKind.expense
+            ? context.appColors.expenseSoft
+            : context.appColors.incomeSoft,
+        selectedForegroundColor: kind == TransactionKind.expense
+            ? context.appColors.expense
+            : context.appColors.income,
+      ),
       onSelectionChanged: onChanged == null
           ? null
           : (selection) => onChanged!(selection.first),
@@ -329,8 +338,13 @@ class _CategoryPicker extends StatelessWidget {
               categoryIconFor(category.icon),
               color: categoryColorFor(category.color, colors),
             ),
-            // Keep the icon visible when selected (no check mark over it).
+            // Keep the icon visible when selected (no check mark over it),
+            // and tint the chip with the category's own color.
             showCheckmark: false,
+            selectedColor: categoryColorFor(
+              category.color,
+              colors,
+            ).withValues(alpha: 0.16),
             label: Text(category.name),
             selected: category.id == selectedId,
             onSelected: onChanged == null

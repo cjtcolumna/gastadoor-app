@@ -134,7 +134,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       decoration: const InputDecoration(
         labelText: 'Email',
         prefixIcon: Icon(Icons.mail_outline),
-        border: OutlineInputBorder(),
       ),
       keyboardType: TextInputType.emailAddress,
       autofillHints: const [AutofillHints.email],
@@ -151,7 +150,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       decoration: InputDecoration(
         labelText: 'Password',
         prefixIcon: const Icon(Icons.lock_outline),
-        border: const OutlineInputBorder(),
         suffixIcon: IconButton(
           tooltip: _hidePassword ? 'Show password' : 'Hide password',
           icon: Icon(

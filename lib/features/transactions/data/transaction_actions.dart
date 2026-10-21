@@ -32,7 +32,7 @@ class TransactionActions {
   /// the next time a screen asks.
   void _refreshScreens() {
     _ref.invalidate(accountBalancesProvider);
-    _ref.invalidate(monthSpentCentsProvider);
+    _ref.invalidate(monthTotalsProvider);
     _ref.invalidate(historyPageProvider);
   }
 }

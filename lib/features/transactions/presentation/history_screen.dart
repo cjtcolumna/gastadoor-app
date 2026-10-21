@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
+import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/dates.dart';
 import '../../../core/utils/money.dart';
 import '../../../core/widgets/screen_padding.dart';
+import '../../categories/presentation/category_visuals.dart';
 import '../data/transactions_repository.dart';
 import '../domain/transaction.dart';
-import '../../categories/presentation/category_visuals.dart';
 import '../domain/transaction_page.dart';
 import 'transaction_form_sheet.dart';
 
@@ -63,20 +64,60 @@ class _HistoryList extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: screenPadding(context),
       children: [
-        Card(
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              for (final (i, item) in page.items.indexed) ...[
-                if (i > 0) const Divider(height: 1, indent: 72),
-                _TransactionTile(item: item),
+        // One small heading + card per day: "Today", "Yesterday", "Oct 20"...
+        for (final (day, items) in groupByDay(page.items)) ...[
+          _DayHeader(day: day, items: items),
+          Card(
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                for (final (i, item) in items.indexed) ...[
+                  if (i > 0) const Divider(height: 1, indent: 72),
+                  _TransactionTile(item: item),
+                ],
               ],
-            ],
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
+          const SizedBox(height: 8),
+        ],
+        const SizedBox(height: 8),
         _PaginationBar(page: page, onPageChanged: onPageChanged),
       ],
+    );
+  }
+}
+
+/// "Today" on the left, that day's net total on the right.
+class _DayHeader extends StatelessWidget {
+  const _DayHeader({required this.day, required this.items});
+
+  final DateTime day;
+  final List<TransactionListItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final net = items.fold<int>(0, (sum, item) {
+      final t = item.transaction;
+      return t.kind == TransactionKind.income
+          ? sum + t.amountCents
+          : sum - t.amountCents;
+    });
+    final muted = theme.textTheme.labelLarge?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
+      child: Row(
+        children: [
+          Expanded(child: Text(friendlyDate(day), style: muted)),
+          Text(
+            '${net < 0 ? '−' : '+'} ${Money.format(net.abs())}',
+            style: muted,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -88,30 +129,22 @@ class _TransactionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final money = context.appColors;
     final t = item.transaction;
     final isExpense = t.kind == TransactionKind.expense;
-    final date = DateFormat.MMMd().format(t.occurredOn);
     final title = item.categoryName ?? (isExpense ? 'Expense' : 'Income');
-    final details = [date, item.accountName, if (t.note != null) t.note!];
+    final details = [item.accountName, if (t.note != null) t.note!];
 
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       // The category's icon and color, or a plain arrow if there's none.
       leading: item.categoryName != null
           ? CategoryAvatar(icon: item.categoryIcon, color: item.categoryColor)
           : CircleAvatar(
-              backgroundColor: isExpense
-                  ? colors.errorContainer
-                  : colors.primaryContainer,
-              foregroundColor: isExpense
-                  ? colors.onErrorContainer
-                  : colors.onPrimaryContainer,
-              child: Icon(
-                isExpense ? Icons.arrow_upward : Icons.arrow_downward,
-              ),
+              backgroundColor: isExpense ? money.expenseSoft : money.incomeSoft,
+              foregroundColor: isExpense ? money.expense : money.income,
+              child: Icon(isExpense ? Icons.north_east : Icons.south_west),
             ),
-      title: Text(title),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
       subtitle: Text(
         details.join(' · '),
         maxLines: 1,
@@ -120,8 +153,10 @@ class _TransactionTile extends StatelessWidget {
       trailing: Text(
         '${isExpense ? '−' : '+'} ${Money.format(t.amountCents)}',
         style: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: isExpense ? colors.error : colors.primary,
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
+          // Red for money out, green for money in.
+          color: isExpense ? money.expense : money.income,
           fontFeatures: const [FontFeature.tabularFigures()],
         ),
       ),

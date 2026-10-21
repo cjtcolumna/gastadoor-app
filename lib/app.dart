@@ -13,7 +13,8 @@ class GastaDoorApp extends ConsumerWidget {
       title: 'GastaDoor',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
+      // Always light, for a clean look (no dark mode for now).
+      themeMode: ThemeMode.light,
       routerConfig: ref.watch(appRouterProvider),
     );
   }

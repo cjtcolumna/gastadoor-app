@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/dates.dart';
 import '../domain/transaction.dart';
+import '../domain/month_totals.dart';
 import '../domain/transaction_draft.dart';
 import '../domain/transaction_page.dart';
 
@@ -65,12 +66,12 @@ final transactionsRepositoryProvider = Provider<TransactionsRepository>(
   (ref) => TransactionsRepository(ref.watch(supabaseClientProvider)),
 );
 
-/// Total spent (in cents) in the current calendar month.
-/// Returns 0 when Supabase is not configured or nobody is signed in.
-final monthSpentCentsProvider = FutureProvider<int>((ref) async {
-  if (!ref.watch(supabaseReadyProvider)) return 0;
+/// Money in and money out (in cents) for the current calendar month.
+/// Both are 0 when Supabase is not configured or nobody is signed in.
+final monthTotalsProvider = FutureProvider<MonthTotals>((ref) async {
+  if (!ref.watch(supabaseReadyProvider)) return MonthTotals.zero;
   final user = await ref.watch(currentUserProvider.future);
-  if (user == null) return 0;
+  if (user == null) return MonthTotals.zero;
 
   final now = DateTime.now();
   final first = DateTime(now.year, now.month);
@@ -78,9 +79,7 @@ final monthSpentCentsProvider = FutureProvider<int>((ref) async {
   final txns = await ref
       .watch(transactionsRepositoryProvider)
       .fetchBetween(first, last);
-  return txns
-      .where((t) => t.kind == TransactionKind.expense)
-      .fold<int>(0, (sum, t) => sum + t.amountCents);
+  return MonthTotals.from(txns);
 });
 
 /// One page of history. `ref.watch(historyPageProvider(0))` is page 1,

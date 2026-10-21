@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/money.dart';
 import '../domain/account.dart';
 import 'account_type_ui.dart';
@@ -20,22 +21,27 @@ class AccountBalanceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final money = context.appColors;
 
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: CircleAvatar(
-        backgroundColor: colors.primaryContainer,
-        foregroundColor: colors.onPrimaryContainer,
-        child: Icon(account.type.icon),
+        backgroundColor: money.incomeSoft,
+        foregroundColor: theme.colorScheme.primary,
+        child: Icon(account.type.icon, size: 22),
       ),
-      title: Text(account.name),
+      title: Text(
+        account.name,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
       subtitle: Text(account.type.label),
       trailing: Text(
         Money.format(balanceCents),
         style: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: balanceCents < 0 ? colors.error : null,
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
+          // Money you owe shows in red.
+          color: balanceCents < 0 ? money.expense : theme.colorScheme.onSurface,
           fontFeatures: const [FontFeature.tabularFigures()],
         ),
       ),

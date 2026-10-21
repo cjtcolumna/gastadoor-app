@@ -51,7 +51,6 @@ class MoneyTextField extends StatelessWidget {
         prefixText: '₱ ',
         prefixStyle: large ? bigText : null,
         hintText: '0.00',
-        border: const OutlineInputBorder(),
       ),
       keyboardType: TextInputType.numberWithOptions(
         decimal: true,
