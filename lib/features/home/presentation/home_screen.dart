@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/money.dart';
+import '../../auth/data/auth_repository.dart';
 import '../../transactions/data/transactions_repository.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -13,11 +14,15 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final supabaseReady = ref.watch(supabaseReadyProvider);
+    final signedIn = ref.watch(currentUserProvider).value != null;
     final spent = ref.watch(monthSpentCentsProvider);
     final monthLabel = DateFormat.yMMMM().format(DateTime.now());
 
     return Scaffold(
-      appBar: AppBar(title: const Text('GastaDoor')),
+      appBar: AppBar(
+        title: const Text('GastaDoor'),
+        actions: [if (signedIn) const _SignOutButton()],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -63,6 +68,20 @@ class HomeScreen extends ConsumerWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// Signs the user out. The router then sends them back to the login screen.
+class _SignOutButton extends ConsumerWidget {
+  const _SignOutButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return IconButton(
+      tooltip: 'Sign out',
+      icon: const Icon(Icons.logout),
+      onPressed: () => ref.read(authRepositoryProvider).signOut(),
     );
   }
 }
