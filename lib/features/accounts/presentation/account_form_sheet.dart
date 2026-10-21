@@ -12,6 +12,8 @@ import 'account_type_ui.dart';
 Future<void> showAccountFormSheet(BuildContext context, {Account? account}) {
   return showModalBottomSheet<void>(
     context: context,
+    // Open above the whole app, so the floating tab bar can't cover the form.
+    useRootNavigator: true,
     isScrollControlled: true, // lets the sheet grow above the keyboard
     useSafeArea: true,
     showDragHandle: true,
@@ -98,7 +100,9 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
     // Push the form up when the on-screen keyboard opens.
     final keyboard = MediaQuery.viewInsetsOf(context).bottom;
 
-    return Padding(
+    // Scrollable, so every field stays reachable on small screens
+    // or when the keyboard takes up half the screen.
+    return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(24, 0, 24, 24 + keyboard),
       child: Form(
         key: _formKey,
