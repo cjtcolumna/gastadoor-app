@@ -39,6 +39,16 @@ void main() {
       expect(validateMoney('', required: false), isNull);
     });
 
+    test('can require an amount above zero', () {
+      expect(
+        validateMoney('0', mustBePositive: true),
+        'Enter an amount above zero',
+      );
+      expect(validateMoney('0.00', mustBePositive: true), isNotNull);
+      expect(validateMoney('0.01', mustBePositive: true), isNull);
+      expect(validateMoney('0'), isNull); // allowed when not required
+    });
+
     test('rejects text that is not a full amount', () {
       expect(validateMoney('-'), 'Enter a valid amount');
       expect(validateMoney('12.5'), isNull);

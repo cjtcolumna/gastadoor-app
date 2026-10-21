@@ -43,6 +43,14 @@ Future<void> pumpHistory(WidgetTester tester, int total) async {
   await tester.pumpAndSettle();
 }
 
+/// Scrolls the Next button fully into view, then taps it.
+Future<void> tapNext(WidgetTester tester) async {
+  await tester.ensureVisible(find.text('Next'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Next'));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('shows expense details', (tester) async {
     await pumpHistory(tester, 1);
@@ -59,16 +67,14 @@ void main() {
     expect(find.text('Page 1 of 3'), findsOneWidget);
     expect(find.text('Showing 1–20 of 45'), findsOneWidget);
 
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
+    await tapNext(tester);
     // A new page starts at the top, showing expense #21 first.
     expect(find.text('Oct 21 · GCash · Expense #21'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Next'), 300);
     expect(find.text('Page 2 of 3'), findsOneWidget);
     expect(find.text('Showing 21–40 of 45'), findsOneWidget);
 
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
+    await tapNext(tester);
     await tester.scrollUntilVisible(find.text('Next'), 300);
     expect(find.text('Showing 41–45 of 45'), findsOneWidget);
     // On the last page, Next is turned off.

@@ -7,14 +7,18 @@ class TransactionListItem {
     required this.transaction,
     required this.accountName,
     this.categoryName,
+    this.categoryIcon,
   });
 
   final Transaction transaction;
   final String accountName;
   final String? categoryName;
 
+  /// An emoji like '🍔', or null.
+  final String? categoryIcon;
+
   /// Builds an item from a Supabase row that includes
-  /// `accounts(name)` and `categories(name)`.
+  /// `accounts(name)` and `categories(name, icon)`.
   factory TransactionListItem.fromRow(Map<String, dynamic> row) {
     final account = row['accounts'] as Map<String, dynamic>?;
     final category = row['categories'] as Map<String, dynamic>?;
@@ -22,6 +26,7 @@ class TransactionListItem {
       transaction: Transaction.fromJson(row),
       accountName: account?['name'] as String? ?? 'Unknown account',
       categoryName: category?['name'] as String?,
+      categoryIcon: category?['icon'] as String?,
     );
   }
 }

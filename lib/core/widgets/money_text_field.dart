@@ -13,7 +13,10 @@ class MoneyTextField extends StatelessWidget {
     this.helperText,
     this.allowNegative = false,
     this.required = true,
+    this.mustBePositive = false,
     this.enabled = true,
+    this.autofocus = false,
+    this.large = false,
   });
 
   final TextEditingController controller;
@@ -23,17 +26,30 @@ class MoneyTextField extends StatelessWidget {
 
   /// When false, an empty box means zero.
   final bool required;
+
+  /// When true, zero is not allowed (e.g. an expense of ₱0.00).
+  final bool mustBePositive;
   final bool enabled;
+  final bool autofocus;
+
+  /// Big digits, for the main amount on a form.
+  final bool large;
 
   @override
   Widget build(BuildContext context) {
+    final bigText = Theme.of(context).textTheme.headlineMedium
+        ?.copyWith(fontWeight: FontWeight.w600);
+
     return TextFormField(
       controller: controller,
       enabled: enabled,
+      autofocus: autofocus,
+      style: large ? bigText : null,
       decoration: InputDecoration(
         labelText: label,
         helperText: helperText,
         prefixText: '₱ ',
+        prefixStyle: large ? bigText : null,
         hintText: '0.00',
         border: const OutlineInputBorder(),
       ),
@@ -42,7 +58,11 @@ class MoneyTextField extends StatelessWidget {
         signed: allowNegative,
       ),
       inputFormatters: [moneyInputFormatter(allowNegative: allowNegative)],
-      validator: (value) => validateMoney(value, required: required),
+      validator: (value) => validateMoney(
+        value,
+        required: required,
+        mustBePositive: mustBePositive,
+      ),
     );
   }
 }
@@ -59,9 +79,15 @@ TextInputFormatter moneyInputFormatter({bool allowNegative = false}) {
   );
 }
 
-String? validateMoney(String? value, {bool required = true}) {
+String? validateMoney(
+  String? value, {
+  bool required = true,
+  bool mustBePositive = false,
+}) {
   final text = value?.trim() ?? '';
   if (text.isEmpty) return required ? 'Enter an amount' : null;
-  if (Money.parseToCents(text) == null) return 'Enter a valid amount';
+  final cents = Money.parseToCents(text);
+  if (cents == null) return 'Enter a valid amount';
+  if (mustBePositive && cents <= 0) return 'Enter an amount above zero';
   return null;
 }

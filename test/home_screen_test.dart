@@ -40,6 +40,15 @@ void main() {
     expect(hits.path.any((entry) => entry.target == buttonBox), isTrue);
   });
 
+  testWidgets('the + button opens the new expense form', (tester) async {
+    await tester.pumpWidget(const ProviderScope(child: GastaDoorApp()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Add expense'));
+    await tester.pumpAndSettle();
+    expect(find.text('New expense'), findsOneWidget);
+  });
+
   testWidgets('floating tab bar switches between Home, Accounts, History', (
     tester,
   ) async {

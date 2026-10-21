@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
 import '../../../core/supabase/supabase_providers.dart';
+import '../../../core/utils/dates.dart';
 import '../domain/transaction.dart';
+import '../domain/transaction_draft.dart';
 import '../domain/transaction_page.dart';
 
 class TransactionsRepository {
@@ -16,8 +18,8 @@ class TransactionsRepository {
     final rows = await _client
         .from('transactions')
         .select()
-        .gte('occurred_on', _date(from))
-        .lte('occurred_on', _date(to))
+        .gte('occurred_on', toDbDate(from))
+        .lte('occurred_on', toDbDate(to))
         .order('occurred_on', ascending: false);
     return rows.map(Transaction.fromJson).toList();
   }
@@ -32,7 +34,7 @@ class TransactionsRepository {
     final (from, to) = TransactionPage.rowRange(page, pageSize: pageSize);
     final response = await _client
         .from('transactions')
-        .select('*, accounts(name), categories(name)')
+        .select('*, accounts(name), categories(name, icon)')
         .order('occurred_on', ascending: false)
         .order('created_at', ascending: false)
         .range(from, to)
@@ -46,10 +48,17 @@ class TransactionsRepository {
     );
   }
 
-  static String _date(DateTime d) =>
-      '${d.year.toString().padLeft(4, '0')}-'
-      '${d.month.toString().padLeft(2, '0')}-'
-      '${d.day.toString().padLeft(2, '0')}';
+  Future<void> create(TransactionDraft draft) async {
+    await _client.from('transactions').insert(draft.toRow());
+  }
+
+  Future<void> update(String id, TransactionDraft draft) async {
+    await _client.from('transactions').update(draft.toRow()).eq('id', id);
+  }
+
+  Future<void> delete(String id) async {
+    await _client.from('transactions').delete().eq('id', id);
+  }
 }
 
 final transactionsRepositoryProvider = Provider<TransactionsRepository>(

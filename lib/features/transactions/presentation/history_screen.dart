@@ -7,6 +7,7 @@ import '../../../core/widgets/screen_padding.dart';
 import '../data/transactions_repository.dart';
 import '../domain/transaction.dart';
 import '../domain/transaction_page.dart';
+import 'transaction_form_sheet.dart';
 
 /// The History tab: your transactions, newest first, 20 per page.
 class HistoryScreen extends ConsumerStatefulWidget {
@@ -102,7 +103,10 @@ class _TransactionTile extends StatelessWidget {
         foregroundColor: isExpense
             ? colors.onErrorContainer
             : colors.onPrimaryContainer,
-        child: Icon(isExpense ? Icons.arrow_upward : Icons.arrow_downward),
+        // The category's emoji, or an arrow if there's no category.
+        child: item.categoryIcon != null
+            ? Text(item.categoryIcon!, style: const TextStyle(fontSize: 20))
+            : Icon(isExpense ? Icons.arrow_upward : Icons.arrow_downward),
       ),
       title: Text(title),
       subtitle: Text(
@@ -118,6 +122,7 @@ class _TransactionTile extends StatelessWidget {
           fontFeatures: const [FontFeature.tabularFigures()],
         ),
       ),
+      onTap: () => showTransactionFormSheet(context, existing: t),
     );
   }
 }
@@ -187,7 +192,7 @@ class _EmptyState extends StatelessWidget {
         Icon(Icons.receipt_long_outlined, size: 48),
         SizedBox(height: 12),
         Text(
-          'No expenses yet.\nThey will show up here once you add some.',
+          'No expenses yet.\nTap + below to add your first one.',
           textAlign: TextAlign.center,
         ),
       ],

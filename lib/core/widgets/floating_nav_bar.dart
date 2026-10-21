@@ -20,11 +20,15 @@ class FloatingNavBar extends StatelessWidget {
     required this.tabs,
     required this.currentIndex,
     required this.onTap,
+    this.onAdd,
   });
 
   final List<NavTab> tabs;
   final int currentIndex;
   final ValueChanged<int> onTap;
+
+  /// When set, a round "+" button appears next to the tabs.
+  final VoidCallback? onAdd;
 
   @override
   Widget build(BuildContext context) {
@@ -36,33 +40,70 @@ class FloatingNavBar extends StatelessWidget {
       child: Center(
         heightFactor: 1,
         child: Container(
-          constraints: const BoxConstraints(maxWidth: 420),
-          margin: const EdgeInsets.symmetric(horizontal: 24),
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: colors.surfaceContainerHigh,
-            borderRadius: BorderRadius.circular(32),
-            boxShadow: [
-              BoxShadow(
-                color: colors.shadow.withValues(alpha: 0.15),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
+          constraints: const BoxConstraints(maxWidth: 480),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
-              for (final (i, tab) in tabs.indexed)
-                Expanded(
-                  child: _TabButton(
-                    tab: tab,
-                    selected: i == currentIndex,
-                    onTap: () => onTap(i),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: colors.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(32),
+                    boxShadow: [_shadow(colors)],
+                  ),
+                  child: Row(
+                    children: [
+                      for (final (i, tab) in tabs.indexed)
+                        Expanded(
+                          child: _TabButton(
+                            tab: tab,
+                            selected: i == currentIndex,
+                            onTap: () => onTap(i),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
+              ),
+              if (onAdd != null) ...[
+                const SizedBox(width: 12),
+                _AddButton(onPressed: onAdd!),
+              ],
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+BoxShadow _shadow(ColorScheme colors) => BoxShadow(
+  color: colors.shadow.withValues(alpha: 0.15),
+  blurRadius: 24,
+  offset: const Offset(0, 8),
+);
+
+/// The round "+" button for adding an expense.
+class _AddButton extends StatelessWidget {
+  const _AddButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [_shadow(colors)],
+      ),
+      child: IconButton.filled(
+        tooltip: 'Add expense',
+        onPressed: onPressed,
+        iconSize: 30,
+        style: IconButton.styleFrom(fixedSize: const Size.square(64)),
+        icon: const Icon(Icons.add),
       ),
     );
   }

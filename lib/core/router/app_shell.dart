@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/transactions/presentation/transaction_form_sheet.dart';
 import '../widgets/floating_nav_bar.dart';
 
 const appTabs = [
@@ -39,6 +40,7 @@ class AppShell extends StatelessWidget {
           index,
           initialLocation: index == navigationShell.currentIndex,
         ),
+        onAdd: () => showTransactionFormSheet(context),
       ),
     );
   }
