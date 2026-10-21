@@ -83,6 +83,9 @@ class AppTheme {
   /// The soft grey-white behind everything; cards sit on it in pure white.
   static const background = Color(0xFFF5F7F6);
 
+  /// The app's font: soft, rounded, friendly.
+  static const fontFamily = 'Nunito';
+
   static ThemeData light() {
     const appColors = AppColors.light;
     final scheme = ColorScheme.fromSeed(
@@ -91,7 +94,13 @@ class AppTheme {
       surface: Colors.white,
     );
     final radius = BorderRadius.circular(16);
-    final base = ThemeData(colorScheme: scheme, useMaterial3: true);
+    final base = ThemeData(
+      colorScheme: scheme,
+      useMaterial3: true,
+      // Every Text in the app uses Nunito unless it says otherwise.
+      // The font files are bundled in assets/fonts (see pubspec.yaml).
+      fontFamily: fontFamily,
+    );
     final text = base.textTheme;
 
     return base.copyWith(
@@ -154,7 +163,11 @@ class AppTheme {
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(52),
           shape: RoundedRectangleBorder(borderRadius: radius),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(
+            fontFamily: fontFamily,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
       chipTheme: ChipThemeData(
