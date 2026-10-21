@@ -50,11 +50,18 @@ const card = Account(
 void main() {
   late FakeAccountsNotifier fake;
 
-  Future<void> pumpScreen(WidgetTester tester, List<Account> start) async {
+  Future<void> pumpScreen(
+    WidgetTester tester,
+    List<Account> start, {
+    Map<String, int> balances = const {},
+  }) async {
     fake = FakeAccountsNotifier(start);
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [accountsProvider.overrideWith(() => fake)],
+        overrides: [
+          accountsProvider.overrideWith(() => fake),
+          accountBalancesProvider.overrideWith((ref) async => balances),
+        ],
         child: const MaterialApp(home: AccountsScreen()),
       ),
     );
@@ -74,6 +81,17 @@ void main() {
     expect(find.text('₱379.50'), findsOneWidget);
   });
 
+  testWidgets('shows current balances from the database when available', (
+    tester,
+  ) async {
+    // Cash started at 500.00 but expenses brought it down to 320.00.
+    await pumpScreen(tester, [cash, card], balances: {'1': 32000});
+
+    expect(find.text('₱320.00'), findsOneWidget);
+    // 320.00 + (-120.50) = 199.50
+    expect(find.text('₱199.50'), findsOneWidget);
+  });
+
   testWidgets('shows a friendly message when there are no accounts', (
     tester,
   ) async {
@@ -83,7 +101,7 @@ void main() {
 
   testWidgets('adds an account with the amount in cents', (tester) async {
     await pumpScreen(tester, [cash]);
-    await tester.tap(find.byType(FloatingActionButton));
+    await tester.tap(find.byTooltip('Add account'));
     await tester.pumpAndSettle();
 
     // Saving with no name shows an error and adds nothing.

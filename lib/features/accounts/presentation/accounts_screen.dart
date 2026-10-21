@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/money.dart';
+import '../../../core/widgets/screen_padding.dart';
 import '../data/accounts_provider.dart';
 import '../domain/account.dart';
+import '../domain/balances.dart';
+import 'account_balance_tile.dart';
 import 'account_form_sheet.dart';
-import 'account_type_ui.dart';
 
-/// Lists the user's accounts (Cash, GCash, BDO...) and lets them add or edit.
+/// The Accounts tab: lists accounts (Cash, GCash, BDO...) and lets you
+/// add, edit, or archive them.
 class AccountsScreen extends ConsumerWidget {
   const AccountsScreen({super.key});
 
@@ -16,11 +19,15 @@ class AccountsScreen extends ConsumerWidget {
     final accounts = ref.watch(accountsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Accounts')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showAccountFormSheet(context),
-        icon: const Icon(Icons.add),
-        label: const Text('Add account'),
+      appBar: AppBar(
+        title: const Text('Accounts'),
+        actions: [
+          IconButton(
+            tooltip: 'Add account',
+            icon: const Icon(Icons.add_circle_outline),
+            onPressed: () => showAccountFormSheet(context),
+          ),
+        ],
       ),
       body: accounts.when(
         data: (list) =>
@@ -33,21 +40,18 @@ class AccountsScreen extends ConsumerWidget {
   }
 }
 
-class _AccountsList extends StatelessWidget {
+class _AccountsList extends ConsumerWidget {
   const _AccountsList({required this.accounts});
 
   final List<Account> accounts;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final total = accounts.fold<int>(
-      0,
-      (sum, a) => sum + a.openingBalanceCents,
-    );
+    final balances = ref.watch(accountBalancesProvider).value ?? const {};
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+      padding: screenPadding(context),
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
@@ -55,60 +59,40 @@ class _AccountsList extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Total starting balance',
+                'Total balance',
                 style: theme.textTheme.titleSmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
-              Text(Money.format(total), style: theme.textTheme.headlineMedium),
+              Text(
+                Money.format(netWorthCents(accounts, balances)),
+                style: theme.textTheme.headlineMedium,
+              ),
             ],
           ),
         ),
         const SizedBox(height: 8),
-        Card(
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              for (final (i, account) in accounts.indexed) ...[
-                if (i > 0) const Divider(height: 1, indent: 72),
-                _AccountTile(account: account),
-              ],
-            ],
+        AccountsCard(
+          children: [
+            for (final account in accounts)
+              AccountBalanceTile(
+                account: account,
+                balanceCents: balanceOf(account, balances),
+                onTap: () => showAccountFormSheet(context, account: account),
+              ),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: Text(
+            'Tap an account to rename it or change its starting balance.',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
       ],
-    );
-  }
-}
-
-class _AccountTile extends StatelessWidget {
-  const _AccountTile({required this.account});
-
-  final Account account;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final owes = account.openingBalanceCents < 0;
-
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: CircleAvatar(
-        backgroundColor: colors.primaryContainer,
-        foregroundColor: colors.onPrimaryContainer,
-        child: Icon(account.type.icon),
-      ),
-      title: Text(account.name),
-      subtitle: Text(account.type.label),
-      trailing: Text(
-        Money.format(account.openingBalanceCents),
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: owes ? colors.error : null,
-          fontFeatures: const [FontFeature.tabularFigures()],
-        ),
-      ),
-      onTap: () => showAccountFormSheet(context, account: account),
     );
   }
 }
@@ -122,7 +106,7 @@ class _EmptyState extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.all(32),
         child: Text(
-          'No accounts yet.\nTap "Add account" to add Cash, GCash, or a bank.',
+          'No accounts yet.\nTap + at the top to add Cash, GCash, or a bank.',
           textAlign: TextAlign.center,
         ),
       ),

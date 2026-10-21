@@ -22,6 +22,18 @@ class AccountsRepository {
     return rows.map(Account.fromJson).toList();
   }
 
+  /// Current balance of each account in cents, keyed by account id.
+  /// Read from the `account_balances` view, which adds up transactions.
+  Future<Map<String, int>> fetchBalances() async {
+    final rows = await _client
+        .from('account_balances')
+        .select('account_id, balance_cents');
+    return {
+      for (final row in rows)
+        row['account_id'] as String: (row['balance_cents'] as num).toInt(),
+    };
+  }
+
   /// True if the user has ever made an account (archived ones count too).
   Future<bool> hasAny() async {
     final rows = await _client.from('accounts').select('id').limit(1);

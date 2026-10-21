@@ -10,6 +10,14 @@ final accountsProvider = AsyncNotifierProvider<AccountsNotifier, List<Account>>(
   AccountsNotifier.new,
 );
 
+/// Current balance of each account (in cents), keyed by account id.
+/// Reloads whenever the account list changes.
+final accountBalancesProvider = FutureProvider<Map<String, int>>((ref) async {
+  final accounts = await ref.watch(accountsProvider.future);
+  if (accounts.isEmpty) return {};
+  return ref.watch(accountsRepositoryProvider).fetchBalances();
+});
+
 class AccountsNotifier extends AsyncNotifier<List<Account>> {
   AccountsRepository get _repo => ref.read(accountsRepositoryProvider);
 
