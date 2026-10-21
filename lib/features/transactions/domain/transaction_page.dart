@@ -6,6 +6,7 @@ class TransactionListItem {
   const TransactionListItem({
     required this.transaction,
     required this.accountName,
+    this.toAccountName,
     this.categoryName,
     this.categoryIcon,
     this.categoryColor,
@@ -13,6 +14,9 @@ class TransactionListItem {
 
   final Transaction transaction;
   final String accountName;
+
+  /// Transfers only: where the money went.
+  final String? toAccountName;
   final String? categoryName;
 
   /// Icon and color names, e.g. 'restaurant' and 'orange', or null.
@@ -20,18 +24,39 @@ class TransactionListItem {
   final String? categoryColor;
 
   /// Builds an item from a Supabase row that includes
-  /// `accounts(name)` and `categories(name, icon, color)`.
+  /// `account:accounts(name)`, `to_account:accounts(name)`,
+  /// and `categories(name, icon, color)`.
   factory TransactionListItem.fromRow(Map<String, dynamic> row) {
-    final account = row['accounts'] as Map<String, dynamic>?;
+    final account = row['account'] as Map<String, dynamic>?;
+    final toAccount = row['to_account'] as Map<String, dynamic>?;
     final category = row['categories'] as Map<String, dynamic>?;
     return TransactionListItem(
       transaction: Transaction.fromJson(row),
       accountName: account?['name'] as String? ?? 'Unknown account',
+      toAccountName: toAccount?['name'] as String?,
       categoryName: category?['name'] as String?,
       categoryIcon: category?['icon'] as String?,
       categoryColor: category?['color'] as String?,
     );
   }
+}
+
+/// A day's total: income minus expenses. Transfers don't change it,
+/// because the money stays yours.
+int dayNetCents(List<TransactionListItem> items) {
+  var net = 0;
+  for (final item in items) {
+    final t = item.transaction;
+    switch (t.kind) {
+      case TransactionKind.income:
+        net += t.amountCents;
+      case TransactionKind.expense:
+        net -= t.amountCents;
+      case TransactionKind.transfer:
+        break;
+    }
+  }
+  return net;
 }
 
 /// Splits a newest-first list into days, keeping the order:

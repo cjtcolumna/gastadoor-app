@@ -53,4 +53,22 @@ void main() {
   test('groupByDay of an empty list is empty', () {
     expect(groupByDay([]), isEmpty);
   });
+
+  test('transfers are not income or spending', () {
+    final totals = MonthTotals.from([
+      txn('1', expense, 10000, DateTime(2026, 10, 1)),
+      txn('2', TransactionKind.transfer, 500000, DateTime(2026, 10, 2)),
+    ]);
+    expect(totals.incomeCents, 0);
+    expect(totals.expenseCents, 10000);
+  });
+
+  test('a day total ignores transfers', () {
+    final net = dayNetCents([
+      item(txn('a', income, 30000, DateTime(2026, 10, 22))),
+      item(txn('b', expense, 10000, DateTime(2026, 10, 22))),
+      item(txn('c', TransactionKind.transfer, 99900, DateTime(2026, 10, 22))),
+    ]);
+    expect(net, 20000);
+  });
 }

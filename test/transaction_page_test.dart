@@ -10,7 +10,7 @@ TransactionPage pageOf(int page, int count, int total) {
     'kind': 'expense',
     'amount_cents': 100,
     'occurred_on': '2026-10-01',
-    'accounts': {'name': 'Cash'},
+    'account': {'name': 'Cash'},
     'categories': null,
   });
   return TransactionPage(

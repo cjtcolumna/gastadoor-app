@@ -15,12 +15,26 @@ import 'package:gastadoor/features/transactions/domain/transaction.dart';
 import 'package:gastadoor/features/transactions/domain/transaction_draft.dart';
 import 'package:gastadoor/features/transactions/presentation/transaction_form_sheet.dart';
 
+const cashAccount = Account(
+  id: 'cash',
+  userId: 'u',
+  name: 'Cash',
+  type: AccountType.cash,
+);
+const gcashAccount = Account(
+  id: 'gcash',
+  userId: 'u',
+  name: 'GCash',
+  type: AccountType.eWallet,
+);
+
 class FakeAccountsNotifier extends AccountsNotifier {
+  FakeAccountsNotifier([this.accounts = const [cashAccount, gcashAccount]]);
+
+  final List<Account> accounts;
+
   @override
-  Future<List<Account>> build() async => const [
-    Account(id: 'cash', userId: 'u', name: 'Cash', type: AccountType.cash),
-    Account(id: 'gcash', userId: 'u', name: 'GCash', type: AccountType.eWallet),
-  ];
+  Future<List<Account>> build() async => accounts;
 }
 
 /// Records what the form asked to save instead of calling Supabase.
@@ -63,7 +77,11 @@ void main() {
   late FakeActions actions;
 
   /// Shows a button that opens the sheet, like the real "+" button does.
-  Future<void> openSheet(WidgetTester tester, {Transaction? existing}) async {
+  Future<void> openSheet(
+    WidgetTester tester, {
+    Transaction? existing,
+    List<Account> accounts = const [cashAccount, gcashAccount],
+  }) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -72,7 +90,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          accountsProvider.overrideWith(FakeAccountsNotifier.new),
+          accountsProvider.overrideWith(() => FakeAccountsNotifier(accounts)),
           categoriesProvider.overrideWith((ref) async => categories),
           archivedAccountsProvider.overrideWith(
             (ref) async => const [
@@ -244,5 +262,77 @@ void main() {
     expect(find.byIcon(Icons.south_west_rounded), findsOneWidget);
     expect(find.byIcon(Icons.work_rounded), findsOneWidget);
     expect(find.byIcon(Icons.phone_iphone_rounded), findsOneWidget);
+  });
+
+  testWidgets('a transfer moves money from one account to another', (
+    tester,
+  ) async {
+    await openSheet(tester);
+    await tapVisible(tester, find.text('Transfer'));
+
+    expect(find.text('New transfer'), findsOneWidget);
+    expect(find.text('From'), findsOneWidget);
+    expect(find.text('To'), findsOneWidget);
+    expect(find.text('Category'), findsNothing); // transfers have none
+
+    await tester.enterText(amountField(), '1,000');
+    await tapVisible(tester, save());
+
+    final draft = actions.added.single;
+    expect(draft.kind, TransactionKind.transfer);
+    expect(draft.amountCents, 100000);
+    expect(draft.accountId, 'cash'); // From: first account
+    expect(draft.toAccountId, 'gcash'); // To: the other one
+    expect(draft.toRow()['category_id'], isNull);
+  });
+
+  testWidgets('the To list never offers the From account', (tester) async {
+    await openSheet(tester);
+    await tapVisible(tester, find.text('Transfer'));
+    // Pick GCash as From: To must switch to Cash automatically.
+    await tapVisible(tester, find.text('GCash').first);
+    await tester.enterText(amountField(), '50');
+    await tapVisible(tester, save());
+
+    final draft = actions.added.single;
+    expect(draft.accountId, 'gcash');
+    expect(draft.toAccountId, 'cash');
+  });
+
+  testWidgets('a transfer needs two accounts', (tester) async {
+    await openSheet(tester, accounts: const [cashAccount]);
+    await tapVisible(tester, find.text('Transfer'));
+    expect(
+      find.text('Add a second account to make transfers.'),
+      findsOneWidget,
+    );
+
+    await tester.enterText(amountField(), '50');
+    await tapVisible(tester, save());
+    expect(
+      find.textContaining('A transfer needs two accounts'),
+      findsOneWidget,
+    );
+    expect(actions.added, isEmpty);
+  });
+
+  testWidgets('editing a transfer keeps From and To', (tester) async {
+    final transfer = Transaction(
+      id: 'tr-1',
+      userId: 'u',
+      accountId: 'gcash',
+      toAccountId: 'cash',
+      kind: TransactionKind.transfer,
+      amountCents: 20000,
+      occurredOn: DateTime(2026, 10, 2),
+    );
+    await openSheet(tester, existing: transfer);
+    expect(find.text('Edit transfer'), findsOneWidget);
+
+    await tapVisible(tester, save());
+    final (id, draft) = actions.updated.single;
+    expect(id, 'tr-1');
+    expect(draft.accountId, 'gcash');
+    expect(draft.toAccountId, 'cash');
   });
 }

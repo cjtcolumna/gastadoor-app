@@ -97,12 +97,11 @@ class _DayHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final net = items.fold<int>(0, (sum, item) {
-      final t = item.transaction;
-      return t.kind == TransactionKind.income
-          ? sum + t.amountCents
-          : sum - t.amountCents;
-    });
+    final net = dayNetCents(items);
+    // A day with only transfers has no money in or out, so no total.
+    final onlyTransfers = items.every(
+      (i) => i.transaction.kind == TransactionKind.transfer,
+    );
     final muted = theme.textTheme.labelLarge?.copyWith(
       color: theme.colorScheme.onSurfaceVariant,
     );
@@ -112,10 +111,11 @@ class _DayHeader extends StatelessWidget {
       child: Row(
         children: [
           Expanded(child: Text(friendlyDate(day), style: muted)),
-          Text(
-            '${net < 0 ? '−' : '+'} ${Money.format(net.abs())}',
-            style: muted,
-          ),
+          if (!onlyTransfers)
+            Text(
+              '${net < 0 ? '−' : '+'} ${Money.format(net.abs())}',
+              style: muted,
+            ),
         ],
       ),
     );
@@ -131,34 +131,63 @@ class _TransactionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final money = context.appColors;
     final t = item.transaction;
-    final isExpense = t.kind == TransactionKind.expense;
-    final title = item.categoryName ?? (isExpense ? 'Expense' : 'Income');
-    final details = [item.accountName, if (t.note != null) t.note!];
+
+    // Each kind gets its own color, arrow, title, sign, and account text:
+    //   expense  → red,   ↗, "− ₱189.00", "GCash"
+    //   income   → green, ↙, "+ ₱25,000.00", "BDO"
+    //   transfer → blue,  ⇄, "₱1,000.00",  "Cash → GCash"
+    final (color, soft, icon, fallbackTitle, sign) = switch (t.kind) {
+      TransactionKind.expense => (
+        money.expense,
+        money.expenseSoft,
+        Icons.north_east_rounded,
+        'Expense',
+        '− ',
+      ),
+      TransactionKind.income => (
+        money.income,
+        money.incomeSoft,
+        Icons.south_west_rounded,
+        'Income',
+        '+ ',
+      ),
+      TransactionKind.transfer => (
+        money.transfer,
+        money.transferSoft,
+        Icons.swap_horiz_rounded,
+        'Transfer',
+        '',
+      ),
+    };
+    final accounts = t.kind == TransactionKind.transfer
+        ? '${item.accountName} → ${item.toAccountName ?? 'Unknown account'}'
+        : item.accountName;
+    final details = [accounts, if (t.note != null) t.note!];
 
     return ListTile(
-      // The category's icon and color, or a plain arrow if there's none.
+      // The category's icon and color, or a plain colored icon if none.
       leading: item.categoryName != null
           ? CategoryAvatar(icon: item.categoryIcon, color: item.categoryColor)
           : CircleAvatar(
-              backgroundColor: isExpense ? money.expenseSoft : money.incomeSoft,
-              foregroundColor: isExpense ? money.expense : money.income,
-              child: Icon(
-                isExpense ? Icons.north_east_rounded : Icons.south_west_rounded,
-              ),
+              backgroundColor: soft,
+              foregroundColor: color,
+              child: Icon(icon),
             ),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+      title: Text(
+        item.categoryName ?? fallbackTitle,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
       subtitle: Text(
         details.join(' · '),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
       trailing: Text(
-        '${isExpense ? '−' : '+'} ${Money.format(t.amountCents)}',
+        '$sign${Money.format(t.amountCents)}',
         style: TextStyle(
           fontSize: 15,
           fontWeight: FontWeight.w700,
-          // Red for money out, green for money in.
-          color: isExpense ? money.expense : money.income,
+          color: color,
           fontFeatures: const [FontFeature.tabularFigures()],
         ),
       ),

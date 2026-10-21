@@ -11,10 +11,14 @@ class MonthTotals {
     var income = 0;
     var expense = 0;
     for (final t in transactions) {
-      if (t.kind == TransactionKind.income) {
-        income += t.amountCents;
-      } else {
-        expense += t.amountCents;
+      switch (t.kind) {
+        case TransactionKind.income:
+          income += t.amountCents;
+        case TransactionKind.expense:
+          expense += t.amountCents;
+        case TransactionKind.transfer:
+          // Moving money between your own accounts isn't income or spending.
+          break;
       }
     }
     return MonthTotals(incomeCents: income, expenseCents: expense);

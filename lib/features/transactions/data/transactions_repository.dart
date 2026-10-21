@@ -35,7 +35,14 @@ class TransactionsRepository {
     final (from, to) = TransactionPage.rowRange(page, pageSize: pageSize);
     final response = await _client
         .from('transactions')
-        .select('*, accounts(name), categories(name, icon, color)')
+        // Two links point to `accounts` (From and To), so each one names
+        // which database link (foreign key) to follow, and gets a nickname.
+        .select(
+          '*, '
+          'account:accounts!transactions_account_id_user_id_fkey(name), '
+          'to_account:accounts!transactions_to_account_id_user_id_fkey(name), '
+          'categories(name, icon, color)',
+        )
         .order('occurred_on', ascending: false)
         .order('created_at', ascending: false)
         .range(from, to)

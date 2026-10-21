@@ -54,11 +54,13 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
   late TransactionKind _kind = widget.existing?.kind ?? TransactionKind.expense;
   late String? _categoryId = widget.existing?.categoryId;
   late String? _accountId = widget.existing?.accountId;
+  late String? _toAccountId = widget.existing?.toAccountId;
   late DateTime _date = dateOnly(widget.existing?.occurredOn ?? DateTime.now());
   bool _saving = false;
   String? _error;
 
   bool get _isEditing => widget.existing != null;
+  bool get _isTransfer => _kind == TransactionKind.transfer;
 
   @override
   void dispose() {
@@ -81,7 +83,8 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
   void _changeKind(TransactionKind kind) {
     setState(() {
       _kind = kind;
-      _categoryId = null; // expense categories don't fit income, and back
+      // Expense categories don't fit income (and transfers have none).
+      _categoryId = null;
     });
   }
 
@@ -97,16 +100,24 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
     if (picked != null) setState(() => _date = dateOnly(picked));
   }
 
-  Future<void> _save(String? accountId) async {
+  Future<void> _save(String? accountId, String? toAccountId) async {
     if (!_formKey.currentState!.validate()) return;
     if (accountId == null) {
       setState(() => _error = 'Add an account first (Accounts tab).');
+      return;
+    }
+    if (_isTransfer && toAccountId == null) {
+      setState(
+        () => _error =
+            'A transfer needs two accounts. Add another in the Accounts tab.',
+      );
       return;
     }
     final draft = TransactionDraft(
       kind: _kind,
       amountCents: Money.parseToCents(_amountController.text)!,
       accountId: accountId,
+      toAccountId: toAccountId,
       categoryId: _categoryId,
       occurredOn: _date,
       note: _noteController.text,
@@ -173,7 +184,12 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
         .toList();
     // Until the user picks one, use their first account (usually Cash).
     final accountId = _accountId ?? accounts.firstOrNull?.id;
-    final kindWord = _kind == TransactionKind.expense ? 'expense' : 'income';
+    // Transfers: "To" can't be the same as "From". If nothing valid is
+    // picked yet, use the first other account.
+    final toAccountId = (_toAccountId != null && _toAccountId != accountId)
+        ? _toAccountId
+        : accounts.where((a) => a.id != accountId).firstOrNull?.id;
+    final kindWord = _kind.name; // 'expense', 'income', or 'transfer'
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(24, 0, 24, 24 + keyboard),
@@ -197,23 +213,46 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
               large: true,
               enabled: !_saving,
             ),
-            const _SectionLabel('Category'),
-            _CategoryPicker(
-              categories: categories,
-              selectedId: _categoryId,
-              onChanged: _saving
-                  ? null
-                  : (id) => setState(() => _categoryId = id),
-            ),
-            const _SectionLabel('Account'),
-            _AccountPicker(
-              accounts: accounts,
-              archivedAccount: _archivedOriginal(accounts),
-              selectedId: accountId,
-              onChanged: _saving
-                  ? null
-                  : (id) => setState(() => _accountId = id),
-            ),
+            if (_isTransfer) ...[
+              // Transfers: where the money leaves, and where it arrives.
+              const _SectionLabel('From'),
+              _AccountPicker(
+                accounts: accounts,
+                archivedAccount: _archivedOriginal(accounts),
+                selectedId: accountId,
+                onChanged: _saving
+                    ? null
+                    : (id) => setState(() => _accountId = id),
+              ),
+              const _SectionLabel('To'),
+              _AccountPicker(
+                // You can't transfer into the same account.
+                accounts: accounts.where((a) => a.id != accountId).toList(),
+                selectedId: toAccountId,
+                emptyText: 'Add a second account to make transfers.',
+                onChanged: _saving
+                    ? null
+                    : (id) => setState(() => _toAccountId = id),
+              ),
+            ] else ...[
+              const _SectionLabel('Category'),
+              _CategoryPicker(
+                categories: categories,
+                selectedId: _categoryId,
+                onChanged: _saving
+                    ? null
+                    : (id) => setState(() => _categoryId = id),
+              ),
+              const _SectionLabel('Account'),
+              _AccountPicker(
+                accounts: accounts,
+                archivedAccount: _archivedOriginal(accounts),
+                selectedId: accountId,
+                onChanged: _saving
+                    ? null
+                    : (id) => setState(() => _accountId = id),
+              ),
+            ],
             const _SectionLabel('Date'),
             Align(
               alignment: Alignment.centerLeft,
@@ -239,7 +278,7 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
               const SizedBox(height: 12),
             ],
             FilledButton(
-              onPressed: _saving ? null : () => _save(accountId),
+              onPressed: _saving ? null : () => _save(accountId, toAccountId),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(52),
               ),
@@ -265,7 +304,7 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
   }
 }
 
-/// Expense | Income toggle.
+/// Expense | Income | Transfer toggle.
 class _KindSwitch extends StatelessWidget {
   const _KindSwitch({required this.kind, required this.onChanged});
 
@@ -274,12 +313,20 @@ class _KindSwitch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final money = context.appColors;
+    // Red for expense, green for income, blue for transfer.
+    final (color, soft) = switch (kind) {
+      TransactionKind.expense => (money.expense, money.expenseSoft),
+      TransactionKind.income => (money.income, money.incomeSoft),
+      TransactionKind.transfer => (money.transfer, money.transferSoft),
+    };
+
     return SegmentedButton<TransactionKind>(
       segments: const [
         ButtonSegment(
           value: TransactionKind.expense,
           label: Text('Expense'),
-          // Same arrows as Home and History: ↗ money out, ↙ money in.
+          // Same icons as Home and History: ↗ out, ↙ in, ⇄ between.
           icon: Icon(Icons.north_east_rounded),
         ),
         ButtonSegment(
@@ -287,18 +334,21 @@ class _KindSwitch extends StatelessWidget {
           label: Text('Income'),
           icon: Icon(Icons.south_west_rounded),
         ),
+        ButtonSegment(
+          value: TransactionKind.transfer,
+          label: Text('Transfer'),
+          icon: Icon(Icons.swap_horiz_rounded),
+        ),
       ],
       selected: {kind},
-      // Keep each side's own arrow when selected (no check mark swap).
+      // Keep each side's own icon when selected (no check mark swap).
       showSelectedIcon: false,
-      // Red when recording an expense, green for income.
       style: SegmentedButton.styleFrom(
-        selectedBackgroundColor: kind == TransactionKind.expense
-            ? context.appColors.expenseSoft
-            : context.appColors.incomeSoft,
-        selectedForegroundColor: kind == TransactionKind.expense
-            ? context.appColors.expense
-            : context.appColors.income,
+        selectedBackgroundColor: soft,
+        selectedForegroundColor: color,
+        // Three tabs on a phone: keep them snug so the words fit.
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        visualDensity: VisualDensity.compact,
       ),
       onSelectionChanged: onChanged == null
           ? null
@@ -380,6 +430,7 @@ class _AccountPicker extends StatelessWidget {
     required this.selectedId,
     required this.onChanged,
     this.archivedAccount,
+    this.emptyText = 'No accounts yet. Add one in the Accounts tab.',
   });
 
   final List<Account> accounts;
@@ -390,11 +441,14 @@ class _AccountPicker extends StatelessWidget {
   /// shown as a greyed-out chip so you can see where the money came from.
   final Account? archivedAccount;
 
+  /// What to say when there are no accounts to pick.
+  final String emptyText;
+
   @override
   Widget build(BuildContext context) {
     final archived = archivedAccount;
     if (accounts.isEmpty && archived == null) {
-      return const Text('No accounts yet. Add one in the Accounts tab.');
+      return Text(emptyText);
     }
     return Wrap(
       spacing: 8,

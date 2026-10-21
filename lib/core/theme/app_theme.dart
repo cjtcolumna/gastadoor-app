@@ -9,6 +9,8 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.incomeSoft,
     required this.expense,
     required this.expenseSoft,
+    required this.transfer,
+    required this.transferSoft,
     required this.warning,
     required this.border,
   });
@@ -21,6 +23,10 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color expense;
   final Color expenseSoft;
 
+  /// Money moved between your own accounts (neither in nor out).
+  final Color transfer;
+  final Color transferSoft;
+
   /// "Careful": e.g. a budget that is almost used up.
   final Color warning;
 
@@ -32,6 +38,8 @@ class AppColors extends ThemeExtension<AppColors> {
     incomeSoft: Color(0xFFE3F4EA),
     expense: Color(0xFFD64545),
     expenseSoft: Color(0xFFFBE7E7),
+    transfer: Color(0xFF3B6FD8),
+    transferSoft: Color(0xFFE6EEFC),
     warning: Color(0xFFE59A1A),
     border: Color(0xFFE7EAEE),
   );
@@ -42,6 +50,8 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? incomeSoft,
     Color? expense,
     Color? expenseSoft,
+    Color? transfer,
+    Color? transferSoft,
     Color? warning,
     Color? border,
   }) => AppColors(
@@ -49,6 +59,8 @@ class AppColors extends ThemeExtension<AppColors> {
     incomeSoft: incomeSoft ?? this.incomeSoft,
     expense: expense ?? this.expense,
     expenseSoft: expenseSoft ?? this.expenseSoft,
+    transfer: transfer ?? this.transfer,
+    transferSoft: transferSoft ?? this.transferSoft,
     warning: warning ?? this.warning,
     border: border ?? this.border,
   );
@@ -61,6 +73,8 @@ class AppColors extends ThemeExtension<AppColors> {
       incomeSoft: Color.lerp(incomeSoft, other.incomeSoft, t)!,
       expense: Color.lerp(expense, other.expense, t)!,
       expenseSoft: Color.lerp(expenseSoft, other.expenseSoft, t)!,
+      transfer: Color.lerp(transfer, other.transfer, t)!,
+      transferSoft: Color.lerp(transferSoft, other.transferSoft, t)!,
       warning: Color.lerp(warning, other.warning, t)!,
       border: Color.lerp(border, other.border, t)!,
     );

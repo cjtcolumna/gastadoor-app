@@ -22,7 +22,7 @@ TransactionPage fakePage(int page, int total) {
           'amount_cents': 18900,
           'occurred_on': '2026-10-21',
           'note': 'Expense #${i + 1}',
-          'accounts': {'name': 'GCash'},
+          'account': {'name': 'GCash'},
           'categories': {'name': 'Food'},
         }),
     ],
@@ -90,5 +90,39 @@ void main() {
   ) async {
     await pumpHistory(tester, 0);
     expect(find.textContaining('No expenses yet'), findsOneWidget);
+  });
+
+  testWidgets('shows a transfer as From → To with no plus or minus', (
+    tester,
+  ) async {
+    final transfer = TransactionListItem.fromRow({
+      'id': 'tr',
+      'user_id': 'u',
+      'account_id': 'cash',
+      'to_account_id': 'gcash',
+      'kind': 'transfer',
+      'amount_cents': 100000,
+      'occurred_on': '2026-10-21',
+      'account': {'name': 'Cash'},
+      'to_account': {'name': 'GCash'},
+      'categories': null,
+    });
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          historyPageProvider.overrideWith(
+            (ref, page) async =>
+                TransactionPage(items: [transfer], page: 0, totalCount: 1),
+          ),
+        ],
+        child: const MaterialApp(home: HistoryScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Transfer'), findsOneWidget);
+    expect(find.text('Cash → GCash'), findsOneWidget);
+    expect(find.text('₱1,000.00'), findsOneWidget);
+    expect(find.textContaining('− ₱1,000.00'), findsNothing);
   });
 }
