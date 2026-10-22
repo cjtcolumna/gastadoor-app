@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/accounts/presentation/accounts_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/budgets/presentation/budgets_screen.dart';
+import '../../features/categories/presentation/categories_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/transactions/presentation/history_screen.dart';
 import '../supabase/supabase_providers.dart';
@@ -59,6 +60,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     path: 'budgets',
                     name: 'budgets',
                     builder: (context, state) => const BudgetsScreen(),
+                  ),
+                  // Opened from the Categories icon on Home.
+                  GoRoute(
+                    path: 'categories',
+                    name: 'categories',
+                    builder: (context, state) => const CategoriesScreen(),
                   ),
                 ],
               ),

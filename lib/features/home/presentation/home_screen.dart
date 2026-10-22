@@ -38,7 +38,16 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('GastaDoor'),
-        actions: [if (signedIn) const _SignOutButton()],
+        actions: [
+          if (signedIn) ...[
+            IconButton(
+              tooltip: 'Categories',
+              icon: const Icon(Icons.category_rounded),
+              onPressed: () => context.go('/categories'),
+            ),
+            const _SignOutButton(),
+          ],
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: () => _refresh(ref),

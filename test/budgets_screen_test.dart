@@ -190,4 +190,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(fake.removed, ['b1']);
   });
+
+  testWidgets('a budget for an archived category keeps its name', (
+    tester,
+  ) async {
+    // 'coffee' isn't in the active categories (it was archived).
+    final coffee = budget('b1', 'coffee', 100000).copyWith(name: 'Coffee');
+    await pumpScreen(tester, budgets: [coffee]);
+
+    expect(find.text('Coffee'), findsOneWidget);
+    expect(find.text('All spending'), findsNothing);
+  });
 }

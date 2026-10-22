@@ -16,6 +16,14 @@ Color budgetStatusColor(BuildContext context, BudgetStatus status) {
   };
 }
 
+/// The budget's title: its category's name, "All spending", or (if the
+/// category was archived, so it's not in the active list) the saved name.
+String budgetTitle(BudgetProgress progress, Category? category) {
+  if (category != null) return category.name;
+  if (progress.budget.categoryId == null) return 'All spending';
+  return progress.budget.name;
+}
+
 /// One budget: icon, name, "₱3,760.00 of ₱5,000.00", what's left (or over),
 /// and a colored progress bar.
 class BudgetProgressTile extends StatelessWidget {
@@ -50,14 +58,17 @@ class BudgetProgressTile extends StatelessWidget {
           children: [
             Row(
               children: [
-                _BudgetAvatar(category: category),
+                _BudgetAvatar(
+                  category: category,
+                  allSpending: progress.budget.categoryId == null,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        category?.name ?? 'All spending',
+                        budgetTitle(progress, category),
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       Text(
@@ -100,14 +111,17 @@ class BudgetProgressTile extends StatelessWidget {
 }
 
 class _BudgetAvatar extends StatelessWidget {
-  const _BudgetAvatar({required this.category});
+  const _BudgetAvatar({required this.category, required this.allSpending});
 
   final Category? category;
+  final bool allSpending;
 
   @override
   Widget build(BuildContext context) {
     final c = category;
     if (c != null) return CategoryAvatar(icon: c.icon, color: c.color);
+    // A budget whose category was archived: plain tag icon.
+    if (!allSpending) return const CategoryAvatar(icon: null, color: null);
     // "All spending" gets a wallet in the app's green.
     return CircleAvatar(
       backgroundColor: context.appColors.incomeSoft,
