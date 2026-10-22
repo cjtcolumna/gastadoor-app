@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../accounts/data/accounts_provider.dart';
+import '../../accounts/domain/account.dart';
 import '../../accounts/presentation/account_type_ui.dart';
 import '../../categories/data/categories_repository.dart';
 import '../../categories/presentation/category_visuals.dart';
@@ -27,9 +28,12 @@ class HistoryFilterBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final accounts = [
-      ...ref.watch(accountsProvider).value ?? const [],
-      ...ref.watch(archivedAccountsProvider).value ?? const [],
+    // Say the type (<Account>) explicitly: without it, Dart treats this list
+    // as "anything" (dynamic), and `account.type.icon` (an extension) then
+    // crashes when the Account chip is tapped.
+    final accounts = <Account>[
+      ...?ref.watch(accountsProvider).value,
+      ...?ref.watch(archivedAccountsProvider).value,
     ];
     final categories = ref.watch(categoriesProvider).value ?? const [];
     final account = accounts.where((a) => a.id == filter.accountId).firstOrNull;

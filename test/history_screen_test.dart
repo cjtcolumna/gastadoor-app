@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gastadoor/features/accounts/data/accounts_provider.dart';
+import 'package:gastadoor/features/accounts/domain/account.dart';
 import 'package:gastadoor/features/transactions/data/transactions_repository.dart';
 import 'package:gastadoor/features/transactions/domain/transaction.dart';
 import 'package:gastadoor/features/transactions/domain/transaction_page.dart';
@@ -234,4 +236,60 @@ void main() {
     expect(box.controller!.text, '');
     expect(find.text('GCash · Expense #1'), findsOneWidget);
   });
+
+  testWidgets('the Account chip lists accounts and filters by one', (
+    tester,
+  ) async {
+    // This once crashed: the account list was typed as "dynamic" when the
+    // app was compiled, so the account icon lookup failed.
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    asked.clear();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          accountsProvider.overrideWith(FakeAccounts.new),
+          archivedAccountsProvider.overrideWith(
+            (ref) async => const [
+              Account(
+                id: 'old',
+                userId: 'u',
+                name: 'Old Wallet',
+                type: AccountType.other,
+                archived: true,
+              ),
+            ],
+          ),
+          historyPageProvider.overrideWith((ref, query) async {
+            asked.add(query);
+            return fakePage(query.$2, 3);
+          }),
+        ],
+        child: const MaterialApp(home: HistoryScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Account'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Account'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Cash'), findsOneWidget);
+    expect(find.text('Old Wallet (archived)'), findsOneWidget);
+
+    await tester.tap(find.text('GCash').last);
+    await tester.pumpAndSettle();
+    expect(asked.last.$1.accountId, 'gcash');
+    expect(find.text('Account'), findsNothing); // chip now says GCash
+  });
+}
+
+class FakeAccounts extends AccountsNotifier {
+  @override
+  Future<List<Account>> build() async => const [
+    Account(id: 'cash', userId: 'u', name: 'Cash', type: AccountType.cash),
+    Account(id: 'gcash', userId: 'u', name: 'GCash', type: AccountType.eWallet),
+  ];
 }
