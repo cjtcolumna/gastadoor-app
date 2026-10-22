@@ -11,6 +11,11 @@ import '../../accounts/data/accounts_provider.dart';
 import '../../accounts/domain/balances.dart';
 import '../../accounts/presentation/account_balance_tile.dart';
 import '../../auth/data/auth_repository.dart';
+import '../../budgets/data/budgets_provider.dart';
+import '../../budgets/presentation/budget_form_sheet.dart';
+import '../../budgets/presentation/budget_progress_tile.dart';
+import '../../budgets/presentation/budgets_screen.dart';
+import '../../categories/data/categories_repository.dart';
 import '../../transactions/data/transactions_repository.dart';
 import '../../transactions/domain/month_totals.dart';
 
@@ -21,7 +26,7 @@ class HomeScreen extends ConsumerWidget {
 
   Future<void> _refresh(WidgetRef ref) async {
     ref.invalidate(accountsProvider);
-    ref.invalidate(monthTotalsProvider);
+    ref.invalidate(monthTransactionsProvider);
     await ref.read(accountBalancesProvider.future);
   }
 
@@ -44,6 +49,8 @@ class HomeScreen extends ConsumerWidget {
             const _NetWorthCard(),
             const SizedBox(height: 12),
             const _MonthSummary(),
+            const SizedBox(height: 28),
+            const _BudgetsSection(),
             const SizedBox(height: 28),
             const _AccountsSection(),
             if (!supabaseReady) ...[
@@ -210,6 +217,48 @@ class _SummaryTile extends StatelessWidget {
 }
 
 /// "Accounts" heading with a Manage link, then a row per account.
+/// "Budgets" heading with a Manage link, then a progress bar per budget.
+class _BudgetsSection extends ConsumerWidget {
+  const _BudgetsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final progress = ref.watch(budgetProgressProvider).value ?? const [];
+    final categories = ref.watch(categoriesProvider).value ?? const [];
+    final byId = {for (final c in categories) c.id: c};
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Text('Budgets', style: theme.textTheme.titleMedium),
+              ),
+            ),
+            TextButton(
+              onPressed: () => context.go('/budgets'),
+              child: const Text('Manage'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        if (progress.isEmpty)
+          const NoBudgetsCard()
+        else
+          BudgetsCard(
+            items: progress,
+            categoriesById: byId,
+            onTap: (p) => showBudgetFormSheet(context, existing: p.budget),
+          ),
+      ],
+    );
+  }
+}
+
 class _AccountsSection extends ConsumerWidget {
   const _AccountsSection();
 

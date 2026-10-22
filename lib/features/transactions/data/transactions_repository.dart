@@ -73,19 +73,25 @@ final transactionsRepositoryProvider = Provider<TransactionsRepository>(
   (ref) => TransactionsRepository(ref.watch(supabaseClientProvider)),
 );
 
-/// Money in and money out (in cents) for the current calendar month.
-/// Both are 0 when Supabase is not configured or nobody is signed in.
-final monthTotalsProvider = FutureProvider<MonthTotals>((ref) async {
-  if (!ref.watch(supabaseReadyProvider)) return MonthTotals.zero;
+/// Every transaction in the current calendar month. Shared by the month
+/// totals on Home and by budgets, so it's only loaded once.
+/// Empty when Supabase is not configured or nobody is signed in.
+final monthTransactionsProvider = FutureProvider<List<Transaction>>((
+  ref,
+) async {
+  if (!ref.watch(supabaseReadyProvider)) return const [];
   final user = await ref.watch(currentUserProvider.future);
-  if (user == null) return MonthTotals.zero;
+  if (user == null) return const [];
 
   final now = DateTime.now();
   final first = DateTime(now.year, now.month);
   final last = DateTime(now.year, now.month + 1, 0);
-  final txns = await ref
-      .watch(transactionsRepositoryProvider)
-      .fetchBetween(first, last);
+  return ref.watch(transactionsRepositoryProvider).fetchBetween(first, last);
+});
+
+/// Money in and money out (in cents) for the current calendar month.
+final monthTotalsProvider = FutureProvider<MonthTotals>((ref) async {
+  final txns = await ref.watch(monthTransactionsProvider.future);
   return MonthTotals.from(txns);
 });
 

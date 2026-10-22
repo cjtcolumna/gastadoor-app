@@ -32,7 +32,8 @@ class TransactionActions {
   /// the next time a screen asks.
   void _refreshScreens() {
     _ref.invalidate(accountBalancesProvider);
-    _ref.invalidate(monthTotalsProvider);
+    // Month totals and budgets both update from this one list.
+    _ref.invalidate(monthTransactionsProvider);
     _ref.invalidate(historyPageProvider);
   }
 }
