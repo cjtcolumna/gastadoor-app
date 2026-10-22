@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gastadoor/features/transactions/data/transactions_repository.dart';
+import 'package:gastadoor/features/transactions/domain/transaction.dart';
 import 'package:gastadoor/features/transactions/domain/transaction_page.dart';
 import 'package:gastadoor/features/transactions/presentation/history_screen.dart';
 
@@ -29,13 +30,31 @@ TransactionPage fakePage(int page, int total) {
   );
 }
 
-Future<void> pumpHistory(WidgetTester tester, int total) async {
+/// The History list's scroll area (the chip row scrolls too, sideways).
+final listScrollable = find.byWidgetPredicate(
+  (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+);
+
+/// Every filter + page the screen asked for, in order.
+final asked = <HistoryQuery>[];
+
+/// Shows History with [total] fake expenses. When any filter or search is
+/// on, the fake database returns [filteredTotal] matches instead.
+Future<void> pumpHistory(
+  WidgetTester tester,
+  int total, {
+  int? filteredTotal,
+}) async {
+  asked.clear();
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        historyPageProvider.overrideWith(
-          (ref, page) async => fakePage(page, total),
-        ),
+        historyPageProvider.overrideWith((ref, query) async {
+          asked.add(query);
+          final (filter, page) = query;
+          final count = filter.isEmpty ? total : (filteredTotal ?? total);
+          return fakePage(page, count);
+        }),
       ],
       child: const MaterialApp(home: HistoryScreen()),
     ),
@@ -64,19 +83,31 @@ void main() {
   testWidgets('pages through 45 expenses, 20 at a time', (tester) async {
     await pumpHistory(tester, 45);
     // The page buttons are below the 20 rows, so scroll down to them.
-    await tester.scrollUntilVisible(find.text('Next'), 300);
+    await tester.scrollUntilVisible(
+      find.text('Next'),
+      300,
+      scrollable: listScrollable,
+    );
     expect(find.text('Page 1 of 3'), findsOneWidget);
     expect(find.text('Showing 1–20 of 45'), findsOneWidget);
 
     await tapNext(tester);
     // A new page starts at the top, showing expense #21 first.
     expect(find.text('GCash · Expense #21'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Next'), 300);
+    await tester.scrollUntilVisible(
+      find.text('Next'),
+      300,
+      scrollable: listScrollable,
+    );
     expect(find.text('Page 2 of 3'), findsOneWidget);
     expect(find.text('Showing 21–40 of 45'), findsOneWidget);
 
     await tapNext(tester);
-    await tester.scrollUntilVisible(find.text('Next'), 300);
+    await tester.scrollUntilVisible(
+      find.text('Next'),
+      300,
+      scrollable: listScrollable,
+    );
     expect(find.text('Showing 41–45 of 45'), findsOneWidget);
     // On the last page, Next is turned off.
     final next = tester.widget<TextButton>(
@@ -111,7 +142,7 @@ void main() {
       ProviderScope(
         overrides: [
           historyPageProvider.overrideWith(
-            (ref, page) async =>
+            (ref, query) async =>
                 TransactionPage(items: [transfer], page: 0, totalCount: 1),
           ),
         ],
@@ -124,5 +155,83 @@ void main() {
     expect(find.text('Cash → GCash'), findsOneWidget);
     expect(find.text('₱1,000.00'), findsOneWidget);
     expect(find.textContaining('− ₱1,000.00'), findsNothing);
+  });
+
+  testWidgets('search waits for typing to pause, then searches notes', (
+    tester,
+  ) async {
+    await pumpHistory(tester, 45, filteredTotal: 2);
+    await tester.enterText(find.byType(TextField), 'Jollibee');
+    await tester.pump(const Duration(milliseconds: 100));
+    // Not yet: still waiting for typing to pause.
+    expect(asked.last.$1.search, '');
+
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    final (filter, page) = asked.last;
+    expect(filter.search, 'Jollibee');
+    expect(page, 0);
+    expect(find.text('Showing 1–2 of 2'), findsOneWidget);
+  });
+
+  testWidgets('the Type chip filters to one kind, and Clear resets', (
+    tester,
+  ) async {
+    await pumpHistory(tester, 45, filteredTotal: 3);
+    expect(find.text('Clear'), findsNothing);
+
+    await tester.tap(find.text('Type'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Income').last);
+    await tester.pumpAndSettle();
+
+    expect(asked.last.$1.kind, TransactionKind.income);
+    expect(find.text('Showing 1–3 of 3'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Clear'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Clear'));
+    await tester.pumpAndSettle();
+    // Back to everything. (It's shown from memory, so no new request.)
+    expect(find.text('Clear'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('Next'),
+      300,
+      scrollable: listScrollable,
+    );
+    expect(find.text('Showing 1–20 of 45'), findsOneWidget);
+  });
+
+  testWidgets('a new filter goes back to page 1', (tester) async {
+    await pumpHistory(tester, 45);
+    await tester.scrollUntilVisible(
+      find.text('Next'),
+      300,
+      scrollable: listScrollable,
+    );
+    await tapNext(tester);
+    expect(asked.last.$2, 1);
+
+    await tester.tap(find.text('Type'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Expenses').last);
+    await tester.pumpAndSettle();
+    expect(asked.last.$2, 0);
+  });
+
+  testWidgets('no matches shows a way to clear the filters', (tester) async {
+    await pumpHistory(tester, 45, filteredTotal: 0);
+    await tester.enterText(find.byType(TextField), 'zzz');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('No matches'), findsOneWidget);
+    await tester.tap(find.text('Clear filters'));
+    await tester.pumpAndSettle();
+    // The search box is empty again and the full list is back.
+    expect(find.textContaining('No matches'), findsNothing);
+    final box = tester.widget<TextField>(find.byType(TextField));
+    expect(box.controller!.text, '');
+    expect(find.text('GCash · Expense #1'), findsOneWidget);
   });
 }

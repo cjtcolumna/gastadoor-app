@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/dates.dart';
 import '../domain/transaction.dart';
+import '../domain/history_filter.dart';
 import '../domain/month_totals.dart';
 import '../domain/spending_breakdown.dart';
 import '../domain/transaction_draft.dart';
@@ -31,10 +32,11 @@ class TransactionsRepository {
   /// so the screen can show "Page 2 of 3".
   Future<TransactionPage> fetchPage(
     int page, {
+    HistoryFilter filter = HistoryFilter.none,
     int pageSize = TransactionPage.defaultPageSize,
   }) async {
     final (from, to) = TransactionPage.rowRange(page, pageSize: pageSize);
-    final response = await _client
+    var query = _client
         .from('transactions')
         // Two links point to `accounts` (From and To), so each one names
         // which database link (foreign key) to follow, and gets a nickname.
@@ -43,7 +45,32 @@ class TransactionsRepository {
           'account:accounts!transactions_account_id_user_id_fkey(name), '
           'to_account:accounts!transactions_to_account_id_user_id_fkey(name), '
           'categories(name, icon, color)',
-        )
+        );
+
+    // Each filter narrows the search inside the database, so only
+    // matching rows (and the right total) come back.
+    final month = filter.month;
+    if (month != null) {
+      query = query
+          .gte('occurred_on', toDbDate(month))
+          .lte(
+            'occurred_on',
+            toDbDate(DateTime(month.year, month.month + 1, 0)),
+          );
+    }
+    final kind = filter.kind;
+    if (kind != null) query = query.eq('kind', kind.name);
+    final accountId = filter.accountId;
+    if (accountId != null) {
+      // Money from this account, or transferred into it.
+      query = query.or('account_id.eq.$accountId,to_account_id.eq.$accountId');
+    }
+    final categoryId = filter.categoryId;
+    if (categoryId != null) query = query.eq('category_id', categoryId);
+    final pattern = filter.searchPattern;
+    if (pattern != null) query = query.ilike('note', pattern);
+
+    final response = await query
         .order('occurred_on', ascending: false)
         .order('created_at', ascending: false)
         .range(from, to)
@@ -124,18 +151,23 @@ final monthTotalsProvider = FutureProvider<MonthTotals>((ref) async {
   return MonthTotals.from(txns);
 });
 
-/// One page of history. `ref.watch(historyPageProvider(0))` is page 1,
-/// `historyPageProvider(1)` is page 2, and so on.
-final historyPageProvider = FutureProvider.family<TransactionPage, int>((
-  ref,
-  page,
-) async {
-  if (!ref.watch(supabaseReadyProvider)) {
-    return TransactionPage(items: const [], page: page, totalCount: 0);
-  }
-  final user = await ref.watch(currentUserProvider.future);
-  if (user == null) {
-    return TransactionPage(items: const [], page: page, totalCount: 0);
-  }
-  return ref.watch(transactionsRepositoryProvider).fetchPage(page);
-});
+/// One page of history for a set of filters.
+/// `historyPageProvider((HistoryFilter.none, 0))` is page 1 of everything;
+/// each different filter + page pair is loaded and remembered separately.
+final historyPageProvider =
+    FutureProvider.family<TransactionPage, HistoryQuery>((ref, query) async {
+      final (filter, page) = query;
+      if (!ref.watch(supabaseReadyProvider)) {
+        return TransactionPage(items: const [], page: page, totalCount: 0);
+      }
+      final user = await ref.watch(currentUserProvider.future);
+      if (user == null) {
+        return TransactionPage(items: const [], page: page, totalCount: 0);
+      }
+      return ref
+          .watch(transactionsRepositoryProvider)
+          .fetchPage(page, filter: filter);
+    });
+
+/// Which filters, and which page (0 = first).
+typedef HistoryQuery = (HistoryFilter filter, int page);
