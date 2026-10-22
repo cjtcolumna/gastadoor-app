@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
+import '../../../core/utils/friendly_error.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../transactions/data/transactions_repository.dart';
 import '../../transactions/domain/transaction.dart';
@@ -162,5 +163,5 @@ String categorySaveError(Object error, String name) {
     return 'You already have a category called "${name.trim()}" '
         '(it may be archived).';
   }
-  return 'Could not save. Check your internet connection.';
+  return friendlyError(error);
 }

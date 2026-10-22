@@ -4,7 +4,9 @@ import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/money.dart';
+import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/screen_padding.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../categories/data/categories_repository.dart';
 import '../../transactions/data/transactions_repository.dart';
 import '../../transactions/domain/month_totals.dart';
@@ -77,19 +79,12 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                 ),
               ],
             ),
-            loading: () => const Padding(
-              padding: EdgeInsets.all(32),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-            error: (e, _) => Card(
-              child: ListTile(
-                title: const Text('Could not load this month.'),
-                trailing: TextButton(
-                  onPressed: () =>
-                      ref.invalidate(transactionsInMonthProvider(_month)),
-                  child: const Text('Try again'),
-                ),
-              ),
+            loading: () => const SkeletonListCard(rows: 5),
+            error: (e, _) => ErrorView.inline(
+              error: e,
+              title: "Couldn't load this month",
+              onRetry: () =>
+                  ref.invalidate(transactionsInMonthProvider(_month)),
             ),
           ),
           const SizedBox(height: 28),

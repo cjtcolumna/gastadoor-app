@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/screen_padding.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../categories/data/categories_repository.dart';
+import '../../transactions/data/transactions_repository.dart';
 import '../data/budgets_provider.dart';
 import 'budget_form_sheet.dart';
 import 'budget_progress_tile.dart';
@@ -53,12 +56,14 @@ class BudgetsScreen extends ConsumerWidget {
               ),
           ],
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: OutlinedButton(
-            onPressed: () => ref.invalidate(budgetsProvider),
-            child: const Text('Could not load budgets. Try again'),
-          ),
+        loading: () => const SkeletonPage(cards: 1),
+        error: (e, _) => ErrorView(
+          error: e,
+          title: "Couldn't load your budgets",
+          onRetry: () {
+            ref.invalidate(budgetsProvider);
+            ref.invalidate(monthTransactionsProvider);
+          },
         ),
       ),
     );

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/friendly_error.dart';
 import '../../../core/utils/money.dart';
+import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/screen_padding.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../data/accounts_provider.dart';
 import '../domain/account.dart';
 import '../domain/balances.dart';
@@ -34,9 +37,12 @@ class AccountsScreen extends ConsumerWidget {
         // Always show the list, so the Archived section is reachable
         // even when every account is archived.
         data: (list) => _AccountsList(accounts: list),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) =>
-            _ErrorState(onRetry: () => ref.invalidate(accountsProvider)),
+        loading: () => const SkeletonPage(),
+        error: (e, _) => ErrorView(
+          error: e,
+          title: "Couldn't load your accounts",
+          onRetry: () => ref.invalidate(accountsProvider),
+        ),
       ),
     );
   }
@@ -175,20 +181,19 @@ class _ArchivedTileState extends ConsumerState<_ArchivedTile> {
 
   Future<void> _restore() async {
     setState(() => _restoring = true);
-    var failed = false;
+    Object? failure;
     try {
       await ref.read(accountsProvider.notifier).restore(widget.account.id);
-    } catch (_) {
-      failed = true;
+    } catch (e) {
+      failure = e;
     }
     // Usually this row disappears after a restore; if it's still here,
     // stop the spinner either way.
     if (!mounted) return;
     setState(() => _restoring = false);
-    if (failed) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not restore. Try again.')),
-      );
+    if (failure != null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(friendlyError(failure))));
     }
   }
 
@@ -225,26 +230,6 @@ class _EmptyState extends StatelessWidget {
           'No accounts yet.\nTap + at the top to add Cash, GCash, or a bank.',
           textAlign: TextAlign.center,
         ),
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('Could not load your accounts.'),
-          const SizedBox(height: 8),
-          OutlinedButton(onPressed: onRetry, child: const Text('Try again')),
-        ],
       ),
     );
   }

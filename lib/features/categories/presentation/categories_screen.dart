@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/screen_padding.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../transactions/domain/transaction.dart';
 import '../data/categories_repository.dart';
 import '../domain/category.dart';
@@ -49,12 +51,11 @@ class CategoriesScreen extends ConsumerWidget {
             const _ArchivedSection(),
           ],
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: OutlinedButton(
-            onPressed: () => ref.invalidate(categoriesProvider),
-            child: const Text('Could not load categories. Try again'),
-          ),
+        loading: () => const SkeletonPage(),
+        error: (e, _) => ErrorView(
+          error: e,
+          title: "Couldn't load your categories",
+          onRetry: () => ref.invalidate(categoriesProvider),
         ),
       ),
     );

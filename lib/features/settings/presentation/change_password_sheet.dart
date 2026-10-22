@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 
+import '../../../core/utils/friendly_error.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../auth/domain/auth_validators.dart';
@@ -54,18 +54,11 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
       messenger.showSnackBar(
         const SnackBar(content: Text('Password changed.')),
       );
-    } on AuthException catch (e) {
+    } catch (e) {
       if (mounted) {
         setState(() {
           _saving = false;
-          _error = e.message;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _saving = false;
-          _error = 'Could not change it. Check your internet connection.';
+          _error = friendlyError(e);
         });
       }
     }

@@ -6,7 +6,9 @@ import 'package:intl/intl.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/money.dart';
+import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/screen_padding.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../accounts/data/accounts_provider.dart';
 import '../../accounts/domain/balances.dart';
 import '../../accounts/presentation/account_balance_tile.dart';
@@ -234,7 +236,8 @@ class _BudgetsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final progress = ref.watch(budgetProgressProvider).value ?? const [];
+    final progressAsync = ref.watch(budgetProgressProvider);
+    final progress = progressAsync.value ?? const [];
     final categories = ref.watch(categoriesProvider).value ?? const [];
     final byId = {for (final c in categories) c.id: c};
 
@@ -256,7 +259,20 @@ class _BudgetsSection extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 4),
-        if (progress.isEmpty)
+        // Not loaded yet is different from "no budgets": don't invite
+        // someone to add a budget they already have.
+        if (!progressAsync.hasValue && progressAsync.hasError)
+          ErrorView.inline(
+            error: progressAsync.error!,
+            title: "Couldn't load your budgets",
+            onRetry: () {
+              ref.invalidate(budgetsProvider);
+              ref.invalidate(monthTransactionsProvider);
+            },
+          )
+        else if (!progressAsync.hasValue)
+          const SkeletonListCard(rows: 2)
+        else if (progress.isEmpty)
           const NoBudgetsCard()
         else
           BudgetsCard(
@@ -277,7 +293,8 @@ class _SpendingSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final month = ref.watch(monthTransactionsProvider).value ?? const [];
+    final monthAsync = ref.watch(monthTransactionsProvider);
+    final month = monthAsync.value ?? const [];
     final categories = ref.watch(categoriesProvider).value ?? const [];
     final byId = {for (final c in categories) c.id: c};
 
@@ -302,11 +319,20 @@ class _SpendingSection extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 4),
-        SpendingBreakdownCard(
-          slices: spendingByCategory(month),
-          categoriesById: byId,
-          maxRows: 3,
-        ),
+        if (!monthAsync.hasValue && monthAsync.hasError)
+          ErrorView.inline(
+            error: monthAsync.error!,
+            title: "Couldn't load this month",
+            onRetry: () => ref.invalidate(monthTransactionsProvider),
+          )
+        else if (!monthAsync.hasValue)
+          const SkeletonListCard(rows: 3)
+        else
+          SpendingBreakdownCard(
+            slices: spendingByCategory(month),
+            categoriesById: byId,
+            maxRows: 3,
+          ),
       ],
     );
   }
@@ -357,13 +383,11 @@ class _AccountsSection extends ConsumerWidget {
                       ),
                   ],
                 ),
-          loading: () => const Padding(
-            padding: EdgeInsets.all(24),
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (e, _) => Text(
-            'Could not load your accounts.',
-            style: TextStyle(color: context.appColors.expense),
+          loading: () => const SkeletonListCard(rows: 3),
+          error: (e, _) => ErrorView.inline(
+            error: e,
+            title: "Couldn't load your accounts",
+            onRetry: () => ref.invalidate(accountsProvider),
           ),
         ),
         if (balances.hasError)

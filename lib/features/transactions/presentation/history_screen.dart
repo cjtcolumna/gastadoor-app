@@ -6,7 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dates.dart';
 import '../../../core/utils/money.dart';
+import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/screen_padding.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../categories/presentation/category_visuals.dart';
 import '../data/transactions_repository.dart';
 import '../domain/history_filter.dart';
@@ -98,8 +100,12 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                           ? const _EmptyState()
                           : _NoMatches(onClear: _clearAll))
                     : _HistoryList(page: page, onPageChanged: _goTo),
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => _ErrorState(onRetry: _refresh),
+                loading: () => const SkeletonPage(),
+                error: (e, _) => ErrorView(
+                  error: e,
+                  title: "Couldn't load your history",
+                  onRetry: _refresh,
+                ),
               ),
             ),
           ),
@@ -353,26 +359,6 @@ class _EmptyState extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
       ],
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('Could not load your history.'),
-          const SizedBox(height: 8),
-          OutlinedButton(onPressed: onRetry, child: const Text('Try again')),
-        ],
-      ),
     );
   }
 }
