@@ -10,7 +10,6 @@ import '../../../core/widgets/screen_padding.dart';
 import '../../accounts/data/accounts_provider.dart';
 import '../../accounts/domain/balances.dart';
 import '../../accounts/presentation/account_balance_tile.dart';
-import '../../auth/data/auth_repository.dart';
 import '../../budgets/data/budgets_provider.dart';
 import '../../budgets/presentation/budget_form_sheet.dart';
 import '../../budgets/presentation/budget_progress_tile.dart';
@@ -41,14 +40,12 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('GastaDoor'),
         actions: [
-          if (signedIn) ...[
+          if (signedIn)
             IconButton(
-              tooltip: 'Categories',
-              icon: const Icon(Icons.category_rounded),
-              onPressed: () => context.go('/categories'),
+              tooltip: 'Settings',
+              icon: const Icon(Icons.settings_rounded),
+              onPressed: () => context.go('/settings'),
             ),
-            const _SignOutButton(),
-          ],
         ],
       ),
       body: RefreshIndicator(
@@ -399,20 +396,6 @@ class _SetupHint extends StatelessWidget {
           'and publishable key, then run with --dart-define-from-file=env.json.',
         ),
       ),
-    );
-  }
-}
-
-/// Signs the user out. The router then sends them back to the login screen.
-class _SignOutButton extends ConsumerWidget {
-  const _SignOutButton();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return IconButton(
-      tooltip: 'Sign out',
-      icon: const Icon(Icons.logout_rounded),
-      onPressed: () => ref.read(authRepositoryProvider).signOut(),
     );
   }
 }

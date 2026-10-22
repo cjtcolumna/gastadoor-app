@@ -8,6 +8,7 @@ import '../../features/budgets/presentation/budgets_screen.dart';
 import '../../features/categories/presentation/categories_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/insights/presentation/insights_screen.dart';
+import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/transactions/presentation/history_screen.dart';
 import '../supabase/supabase_providers.dart';
 import 'app_shell.dart';
@@ -73,6 +74,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     path: 'insights',
                     name: 'insights',
                     builder: (context, state) => const InsightsScreen(),
+                  ),
+                  // Opened from the gear icon on Home.
+                  GoRoute(
+                    path: 'settings',
+                    name: 'settings',
+                    builder: (context, state) => const SettingsScreen(),
                   ),
                 ],
               ),

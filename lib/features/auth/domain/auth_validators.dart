@@ -23,4 +23,11 @@ class AuthValidators {
     }
     return null;
   }
+
+  /// The "type it again" box must match the first password box.
+  static String? confirmPassword(String? value, String password) {
+    if ((value ?? '').isEmpty) return 'Type the password again';
+    if (value != password) return 'Passwords don\'t match';
+    return null;
+  }
 }

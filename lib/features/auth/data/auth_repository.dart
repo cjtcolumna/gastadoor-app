@@ -25,6 +25,11 @@ class AuthRepository {
   }
 
   Future<void> signOut() => _auth.signOut();
+
+  /// Sets a new password for the signed-in user.
+  Future<void> changePassword(String newPassword) async {
+    await _auth.updateUser(UserAttributes(password: newPassword));
+  }
 }
 
 final authRepositoryProvider = Provider<AuthRepository>(
