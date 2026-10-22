@@ -16,7 +16,9 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Transaction {
 
- String get id; String get userId; String get accountId; String? get categoryId; TransactionKind get kind;/// Always positive. [kind] decides whether money goes in or out.
+ String get id; String get userId;/// The account the money comes from (or goes into, for income).
+ String get accountId;/// Transfers only: the account the money moves to.
+ String? get toAccountId; String? get categoryId; TransactionKind get kind;/// Always positive. [kind] decides whether money goes in or out.
  int get amountCents; DateTime get occurredOn; String? get note; DateTime? get createdAt;
 /// Create a copy of Transaction
 /// with the given fields replaced by the non-null parameter values.
@@ -31,20 +33,20 @@ $TransactionCopyWith<Transaction> get copyWith => _$TransactionCopyWithImpl<Tran
 @override
 bool operator ==(Object other) {
   final _this = this as Transaction;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Transaction&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.userId, _this.userId) || other.userId == _this.userId)&&(identical(other.accountId, _this.accountId) || other.accountId == _this.accountId)&&(identical(other.categoryId, _this.categoryId) || other.categoryId == _this.categoryId)&&(identical(other.kind, _this.kind) || other.kind == _this.kind)&&(identical(other.amountCents, _this.amountCents) || other.amountCents == _this.amountCents)&&(identical(other.occurredOn, _this.occurredOn) || other.occurredOn == _this.occurredOn)&&(identical(other.note, _this.note) || other.note == _this.note)&&(identical(other.createdAt, _this.createdAt) || other.createdAt == _this.createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Transaction&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.userId, _this.userId) || other.userId == _this.userId)&&(identical(other.accountId, _this.accountId) || other.accountId == _this.accountId)&&(identical(other.toAccountId, _this.toAccountId) || other.toAccountId == _this.toAccountId)&&(identical(other.categoryId, _this.categoryId) || other.categoryId == _this.categoryId)&&(identical(other.kind, _this.kind) || other.kind == _this.kind)&&(identical(other.amountCents, _this.amountCents) || other.amountCents == _this.amountCents)&&(identical(other.occurredOn, _this.occurredOn) || other.occurredOn == _this.occurredOn)&&(identical(other.note, _this.note) || other.note == _this.note)&&(identical(other.createdAt, _this.createdAt) || other.createdAt == _this.createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Transaction;
-  return Object.hash(runtimeType,_this.id,_this.userId,_this.accountId,_this.categoryId,_this.kind,_this.amountCents,_this.occurredOn,_this.note,_this.createdAt);
+  return Object.hash(runtimeType,_this.id,_this.userId,_this.accountId,_this.toAccountId,_this.categoryId,_this.kind,_this.amountCents,_this.occurredOn,_this.note,_this.createdAt);
 }
 
 @override
 String toString() {
   final _this = this as Transaction;
-  return 'Transaction(id: ${_this.id}, userId: ${_this.userId}, accountId: ${_this.accountId}, categoryId: ${_this.categoryId}, kind: ${_this.kind}, amountCents: ${_this.amountCents}, occurredOn: ${_this.occurredOn}, note: ${_this.note}, createdAt: ${_this.createdAt})';
+  return 'Transaction(id: ${_this.id}, userId: ${_this.userId}, accountId: ${_this.accountId}, toAccountId: ${_this.toAccountId}, categoryId: ${_this.categoryId}, kind: ${_this.kind}, amountCents: ${_this.amountCents}, occurredOn: ${_this.occurredOn}, note: ${_this.note}, createdAt: ${_this.createdAt})';
 }
 
 
@@ -55,7 +57,7 @@ abstract mixin class $TransactionCopyWith<$Res>  {
   factory $TransactionCopyWith(Transaction value, $Res Function(Transaction) _then) = _$TransactionCopyWithImpl;
 @useResult
 $Res call({
- String id, String userId, String accountId, String? categoryId, TransactionKind kind, int amountCents, DateTime occurredOn, String? note, DateTime? createdAt
+ String id, String userId, String accountId, String? toAccountId, String? categoryId, TransactionKind kind, int amountCents, DateTime occurredOn, String? note, DateTime? createdAt
 });
 
 
@@ -72,12 +74,13 @@ class _$TransactionCopyWithImpl<$Res>
 
 /// Create a copy of Transaction
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? userId = null,Object? accountId = null,Object? categoryId = freezed,Object? kind = null,Object? amountCents = null,Object? occurredOn = null,Object? note = freezed,Object? createdAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? userId = null,Object? accountId = null,Object? toAccountId = freezed,Object? categoryId = freezed,Object? kind = null,Object? amountCents = null,Object? occurredOn = null,Object? note = freezed,Object? createdAt = freezed,}) {
   return _then(Transaction(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
 as String,accountId: null == accountId ? _self.accountId : accountId // ignore: cast_nullable_to_non_nullable
-as String,categoryId: freezed == categoryId ? _self.categoryId : categoryId // ignore: cast_nullable_to_non_nullable
+as String,toAccountId: freezed == toAccountId ? _self.toAccountId : toAccountId // ignore: cast_nullable_to_non_nullable
+as String?,categoryId: freezed == categoryId ? _self.categoryId : categoryId // ignore: cast_nullable_to_non_nullable
 as String?,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
 as TransactionKind,amountCents: null == amountCents ? _self.amountCents : amountCents // ignore: cast_nullable_to_non_nullable
 as int,occurredOn: null == occurredOn ? _self.occurredOn : occurredOn // ignore: cast_nullable_to_non_nullable
@@ -168,10 +171,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String userId,  String accountId,  String? categoryId,  TransactionKind kind,  int amountCents,  DateTime occurredOn,  String? note,  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String userId,  String accountId,  String? toAccountId,  String? categoryId,  TransactionKind kind,  int amountCents,  DateTime occurredOn,  String? note,  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Transaction() when $default != null:
-return $default(_that.id,_that.userId,_that.accountId,_that.categoryId,_that.kind,_that.amountCents,_that.occurredOn,_that.note,_that.createdAt);case _:
+return $default(_that.id,_that.userId,_that.accountId,_that.toAccountId,_that.categoryId,_that.kind,_that.amountCents,_that.occurredOn,_that.note,_that.createdAt);case _:
   return orElse();
 
 }
@@ -189,10 +192,10 @@ return $default(_that.id,_that.userId,_that.accountId,_that.categoryId,_that.kin
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String userId,  String accountId,  String? categoryId,  TransactionKind kind,  int amountCents,  DateTime occurredOn,  String? note,  DateTime? createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String userId,  String accountId,  String? toAccountId,  String? categoryId,  TransactionKind kind,  int amountCents,  DateTime occurredOn,  String? note,  DateTime? createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _Transaction():
-return $default(_that.id,_that.userId,_that.accountId,_that.categoryId,_that.kind,_that.amountCents,_that.occurredOn,_that.note,_that.createdAt);case _:
+return $default(_that.id,_that.userId,_that.accountId,_that.toAccountId,_that.categoryId,_that.kind,_that.amountCents,_that.occurredOn,_that.note,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -209,10 +212,10 @@ return $default(_that.id,_that.userId,_that.accountId,_that.categoryId,_that.kin
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String userId,  String accountId,  String? categoryId,  TransactionKind kind,  int amountCents,  DateTime occurredOn,  String? note,  DateTime? createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String userId,  String accountId,  String? toAccountId,  String? categoryId,  TransactionKind kind,  int amountCents,  DateTime occurredOn,  String? note,  DateTime? createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Transaction() when $default != null:
-return $default(_that.id,_that.userId,_that.accountId,_that.categoryId,_that.kind,_that.amountCents,_that.occurredOn,_that.note,_that.createdAt);case _:
+return $default(_that.id,_that.userId,_that.accountId,_that.toAccountId,_that.categoryId,_that.kind,_that.amountCents,_that.occurredOn,_that.note,_that.createdAt);case _:
   return null;
 
 }
@@ -224,12 +227,15 @@ return $default(_that.id,_that.userId,_that.accountId,_that.categoryId,_that.kin
 @JsonSerializable()
 
 class _Transaction implements Transaction {
-  const _Transaction({required this.id, required this.userId, required this.accountId, this.categoryId, required this.kind, required this.amountCents, required this.occurredOn, this.note, this.createdAt});
+  const _Transaction({required this.id, required this.userId, required this.accountId, this.toAccountId, this.categoryId, required this.kind, required this.amountCents, required this.occurredOn, this.note, this.createdAt});
   factory _Transaction.fromJson(Map<String, dynamic> json) => _$TransactionFromJson(json);
 
 @override final  String id;
 @override final  String userId;
+/// The account the money comes from (or goes into, for income).
 @override final  String accountId;
+/// Transfers only: the account the money moves to.
+@override final  String? toAccountId;
 @override final  String? categoryId;
 @override final  TransactionKind kind;
 /// Always positive. [kind] decides whether money goes in or out.
@@ -251,18 +257,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Transaction&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.accountId, accountId) || other.accountId == accountId)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.amountCents, amountCents) || other.amountCents == amountCents)&&(identical(other.occurredOn, occurredOn) || other.occurredOn == occurredOn)&&(identical(other.note, note) || other.note == note)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Transaction&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.accountId, accountId) || other.accountId == accountId)&&(identical(other.toAccountId, toAccountId) || other.toAccountId == toAccountId)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.amountCents, amountCents) || other.amountCents == amountCents)&&(identical(other.occurredOn, occurredOn) || other.occurredOn == occurredOn)&&(identical(other.note, note) || other.note == note)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,userId,accountId,categoryId,kind,amountCents,occurredOn,note,createdAt);
+    return Object.hash(runtimeType,id,userId,accountId,toAccountId,categoryId,kind,amountCents,occurredOn,note,createdAt);
 }
 
 @override
 String toString() {
-    return 'Transaction(id: $id, userId: $userId, accountId: $accountId, categoryId: $categoryId, kind: $kind, amountCents: $amountCents, occurredOn: $occurredOn, note: $note, createdAt: $createdAt)';
+    return 'Transaction(id: $id, userId: $userId, accountId: $accountId, toAccountId: $toAccountId, categoryId: $categoryId, kind: $kind, amountCents: $amountCents, occurredOn: $occurredOn, note: $note, createdAt: $createdAt)';
 }
 
 
@@ -273,7 +279,7 @@ abstract mixin class _$TransactionCopyWith<$Res> implements $TransactionCopyWith
   factory _$TransactionCopyWith(_Transaction value, $Res Function(_Transaction) _then) = __$TransactionCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String userId, String accountId, String? categoryId, TransactionKind kind, int amountCents, DateTime occurredOn, String? note, DateTime? createdAt
+ String id, String userId, String accountId, String? toAccountId, String? categoryId, TransactionKind kind, int amountCents, DateTime occurredOn, String? note, DateTime? createdAt
 });
 
 
@@ -290,12 +296,13 @@ class __$TransactionCopyWithImpl<$Res>
 
 /// Create a copy of Transaction
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? userId = null,Object? accountId = null,Object? categoryId = freezed,Object? kind = null,Object? amountCents = null,Object? occurredOn = null,Object? note = freezed,Object? createdAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? userId = null,Object? accountId = null,Object? toAccountId = freezed,Object? categoryId = freezed,Object? kind = null,Object? amountCents = null,Object? occurredOn = null,Object? note = freezed,Object? createdAt = freezed,}) {
   return _then(_Transaction(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
 as String,accountId: null == accountId ? _self.accountId : accountId // ignore: cast_nullable_to_non_nullable
-as String,categoryId: freezed == categoryId ? _self.categoryId : categoryId // ignore: cast_nullable_to_non_nullable
+as String,toAccountId: freezed == toAccountId ? _self.toAccountId : toAccountId // ignore: cast_nullable_to_non_nullable
+as String?,categoryId: freezed == categoryId ? _self.categoryId : categoryId // ignore: cast_nullable_to_non_nullable
 as String?,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
 as TransactionKind,amountCents: null == amountCents ? _self.amountCents : amountCents // ignore: cast_nullable_to_non_nullable
 as int,occurredOn: null == occurredOn ? _self.occurredOn : occurredOn // ignore: cast_nullable_to_non_nullable

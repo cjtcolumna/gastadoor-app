@@ -1,0 +1,22 @@
+import 'package:flutter/material.dart';
+
+import '../domain/account.dart';
+
+/// How each account type looks on screen.
+extension AccountTypeUi on AccountType {
+  String get label => switch (this) {
+    AccountType.cash => 'Cash',
+    AccountType.bank => 'Bank',
+    AccountType.creditCard => 'Credit card',
+    AccountType.eWallet => 'E-wallet',
+    AccountType.other => 'Other',
+  };
+
+  IconData get icon => switch (this) {
+    AccountType.cash => Icons.payments_rounded,
+    AccountType.bank => Icons.account_balance_rounded,
+    AccountType.creditCard => Icons.credit_card_rounded,
+    AccountType.eWallet => Icons.phone_iphone_rounded,
+    AccountType.other => Icons.wallet_rounded,
+  };
+}
