@@ -5,6 +5,7 @@ import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/dates.dart';
 import '../domain/transaction.dart';
 import '../domain/month_totals.dart';
+import '../domain/spending_breakdown.dart';
 import '../domain/transaction_draft.dart';
 import '../domain/transaction_page.dart';
 
@@ -73,20 +74,48 @@ final transactionsRepositoryProvider = Provider<TransactionsRepository>(
   (ref) => TransactionsRepository(ref.watch(supabaseClientProvider)),
 );
 
-/// Every transaction in the current calendar month. Shared by the month
-/// totals on Home and by budgets, so it's only loaded once.
+/// Every transaction in one calendar month. Pass the month's first day:
+/// `transactionsInMonthProvider(DateTime(2026, 10))`.
 /// Empty when Supabase is not configured or nobody is signed in.
-final monthTransactionsProvider = FutureProvider<List<Transaction>>((
-  ref,
-) async {
+final transactionsInMonthProvider =
+    FutureProvider.family<List<Transaction>, DateTime>((ref, month) async {
+      if (!ref.watch(supabaseReadyProvider)) return const [];
+      final user = await ref.watch(currentUserProvider.future);
+      if (user == null) return const [];
+
+      final first = DateTime(month.year, month.month);
+      final last = DateTime(month.year, month.month + 1, 0);
+      return ref
+          .watch(transactionsRepositoryProvider)
+          .fetchBetween(first, last);
+    });
+
+/// The first day of the current month.
+DateTime thisMonth() {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month);
+}
+
+/// This month's transactions. Shared by the month totals on Home, budgets,
+/// and the spending chart, so they're only loaded once.
+final monthTransactionsProvider = FutureProvider<List<Transaction>>(
+  (ref) => ref.watch(transactionsInMonthProvider(thisMonth()).future),
+);
+
+/// Income and spending for each of the last 6 months (oldest first),
+/// loaded in one request.
+final sixMonthTrendProvider = FutureProvider<List<MonthPoint>>((ref) async {
   if (!ref.watch(supabaseReadyProvider)) return const [];
   final user = await ref.watch(currentUserProvider.future);
   if (user == null) return const [];
 
-  final now = DateTime.now();
-  final first = DateTime(now.year, now.month);
-  final last = DateTime(now.year, now.month + 1, 0);
-  return ref.watch(transactionsRepositoryProvider).fetchBetween(first, last);
+  final last = thisMonth();
+  final first = DateTime(last.year, last.month - 5);
+  final end = DateTime(last.year, last.month + 1, 0);
+  final txns = await ref
+      .watch(transactionsRepositoryProvider)
+      .fetchBetween(first, end);
+  return monthlyTrend(txns, lastMonth: last);
 });
 
 /// Money in and money out (in cents) for the current calendar month.

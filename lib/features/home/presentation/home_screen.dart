@@ -17,7 +17,9 @@ import '../../budgets/presentation/budget_progress_tile.dart';
 import '../../budgets/presentation/budgets_screen.dart';
 import '../../categories/data/categories_repository.dart';
 import '../../transactions/data/transactions_repository.dart';
+import '../../insights/presentation/spending_breakdown_card.dart';
 import '../../transactions/domain/month_totals.dart';
+import '../../transactions/domain/spending_breakdown.dart';
 
 /// The Home tab: a dashboard with your net worth, this month's income and
 /// spending, and each account's balance.
@@ -60,6 +62,8 @@ class HomeScreen extends ConsumerWidget {
             const _MonthSummary(),
             const SizedBox(height: 28),
             const _BudgetsSection(),
+            const SizedBox(height: 28),
+            const _SpendingSection(),
             const SizedBox(height: 28),
             const _AccountsSection(),
             if (!supabaseReady) ...[
@@ -263,6 +267,49 @@ class _BudgetsSection extends ConsumerWidget {
             categoriesById: byId,
             onTap: (p) => showBudgetFormSheet(context, existing: p.budget),
           ),
+      ],
+    );
+  }
+}
+
+/// "Where your money went" this month: the top 3 categories, with a link
+/// to the full Insights page.
+class _SpendingSection extends ConsumerWidget {
+  const _SpendingSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final month = ref.watch(monthTransactionsProvider).value ?? const [];
+    final categories = ref.watch(categoriesProvider).value ?? const [];
+    final byId = {for (final c in categories) c.id: c};
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Text(
+                  'Where your money went',
+                  style: theme.textTheme.titleMedium,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => context.go('/insights'),
+              child: const Text('Insights'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        SpendingBreakdownCard(
+          slices: spendingByCategory(month),
+          categoriesById: byId,
+          maxRows: 3,
+        ),
       ],
     );
   }
