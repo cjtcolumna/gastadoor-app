@@ -16,6 +16,13 @@ void main() {
       expect(find.text('₱0.00'), findsNWidgets(3));
       expect(find.textContaining('Income ·'), findsOneWidget);
       expect(find.textContaining('Spent ·'), findsOneWidget);
+      // No budgets yet, so Home invites you to add one.
+      expect(find.text('Add a budget'), findsOneWidget);
+      // The setup note is at the bottom, so scroll down to it.
+      await tester.scrollUntilVisible(
+        find.text('Supabase is not configured'),
+        300,
+      );
       expect(find.text('Supabase is not configured'), findsOneWidget);
     },
   );

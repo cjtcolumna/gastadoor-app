@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 
+import '../../../core/utils/friendly_error.dart';
 import '../data/auth_repository.dart';
 import '../domain/auth_validators.dart';
 
@@ -57,15 +57,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       } else {
         await auth.signIn(email: email, password: password);
       }
-    } on AuthException catch (e) {
-      if (mounted) setState(() => _error = e.message);
-    } catch (_) {
-      if (mounted) {
-        setState(
-          () =>
-              _error = 'Something went wrong. Check your internet connection.',
-        );
-      }
+    } catch (e) {
+      // Wrong password, no internet, or anything else, in plain words.
+      if (mounted) setState(() => _error = friendlyError(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }

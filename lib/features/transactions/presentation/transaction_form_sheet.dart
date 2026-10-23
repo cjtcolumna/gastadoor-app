@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/friendly_error.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dates.dart';
 import '../../../core/utils/money.dart';
@@ -10,6 +11,7 @@ import '../../accounts/domain/account.dart';
 import '../../accounts/presentation/account_type_ui.dart';
 import '../../categories/data/categories_repository.dart';
 import '../../categories/domain/category.dart';
+import '../../categories/presentation/category_form_sheet.dart';
 import '../../categories/presentation/category_visuals.dart';
 import '../data/transaction_actions.dart';
 import '../domain/transaction.dart';
@@ -164,11 +166,11 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
     try {
       await action();
       if (mounted) Navigator.of(context).pop();
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         setState(() {
           _saving = false;
-          _error = 'Could not save. Check your internet connection.';
+          _error = friendlyError(e);
         });
       }
     }
@@ -242,6 +244,10 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
                 onChanged: _saving
                     ? null
                     : (id) => setState(() => _categoryId = id),
+                // Quick add: opens the category form on top of this one.
+                onAddNew: _saving
+                    ? null
+                    : () => showCategoryFormSheet(context, kind: _kind),
               ),
               const _SectionLabel('Account'),
               _AccountPicker(
@@ -383,18 +389,19 @@ class _CategoryPicker extends StatelessWidget {
     required this.categories,
     required this.selectedId,
     required this.onChanged,
+    this.onAddNew,
   });
 
   final List<Category> categories;
   final String? selectedId;
   final ValueChanged<String?>? onChanged;
 
+  /// Tapped "+ New": add a category without leaving the form.
+  final VoidCallback? onAddNew;
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    if (categories.isEmpty) {
-      return const Text('Loading categories…');
-    }
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -418,6 +425,12 @@ class _CategoryPicker extends StatelessWidget {
                 ? null
                 : (on) => onChanged!(on ? category.id : null),
           ),
+        ActionChip(
+          avatar: const Icon(Icons.add_rounded),
+          label: const Text('New'),
+          tooltip: 'New category',
+          onPressed: onAddNew,
+        ),
       ],
     );
   }

@@ -1,14 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dates.dart';
 import '../../../core/utils/money.dart';
+import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/screen_padding.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../categories/presentation/category_visuals.dart';
 import '../data/transactions_repository.dart';
+import '../domain/history_filter.dart';
 import '../domain/transaction.dart';
 import '../domain/transaction_page.dart';
+import 'history_filter_bar.dart';
 import 'transaction_form_sheet.dart';
 
 /// The History tab: your transactions, newest first, 20 per page.
@@ -23,31 +29,119 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   /// Which page is showing. 0 is the first page.
   int _page = 0;
 
+  /// The chosen filters and search text.
+  HistoryFilter _filter = HistoryFilter.none;
+  final _searchController = TextEditingController();
+
+  /// Waits until typing pauses before searching, instead of asking the
+  /// database again on every single letter.
+  Timer? _searchDelay;
+
+  HistoryQuery get _query => (_filter, _page);
+
+  @override
+  void dispose() {
+    _searchDelay?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
   void _goTo(int page) => setState(() => _page = page);
+
+  /// New filters start again from page 1.
+  void _setFilter(HistoryFilter filter) => setState(() {
+    _filter = filter;
+    _page = 0;
+  });
+
+  void _onSearchChanged(String text) {
+    setState(() {}); // show or hide the clear (x) button right away
+    _searchDelay?.cancel();
+    _searchDelay = Timer(
+      const Duration(milliseconds: 400),
+      () => _setFilter(_filter.copyWith(search: text)),
+    );
+  }
+
+  void _clearAll() {
+    _searchController.clear();
+    _searchDelay?.cancel();
+    _setFilter(HistoryFilter.none);
+  }
 
   Future<void> _refresh() async {
     ref.invalidate(historyPageProvider);
-    await ref.read(historyPageProvider(_page).future);
+    await ref.read(historyPageProvider(_query).future);
   }
 
   @override
   Widget build(BuildContext context) {
-    final pageData = ref.watch(historyPageProvider(_page));
+    final pageData = ref.watch(historyPageProvider(_query));
 
     return Scaffold(
       appBar: AppBar(title: const Text('History')),
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        child: pageData.when(
-          // While the next page loads, keep showing the old one.
-          skipLoadingOnReload: true,
-          data: (page) => page.totalCount == 0
-              ? const _EmptyState()
-              : _HistoryList(page: page, onPageChanged: _goTo),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => _ErrorState(onRetry: _refresh),
-        ),
+      body: Column(
+        children: [
+          HistoryFilterBar(
+            filter: _filter,
+            searchController: _searchController,
+            onSearchChanged: _onSearchChanged,
+            onChanged: _setFilter,
+          ),
+          const SizedBox(height: 4),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              child: pageData.when(
+                // While the next page loads, keep showing the old one.
+                skipLoadingOnReload: true,
+                data: (page) => page.totalCount == 0
+                    ? (_filter.isEmpty
+                          ? const _EmptyState()
+                          : _NoMatches(onClear: _clearAll))
+                    : _HistoryList(page: page, onPageChanged: _goTo),
+                loading: () => const SkeletonPage(),
+                error: (e, _) => ErrorView(
+                  error: e,
+                  title: "Couldn't load your history",
+                  onRetry: _refresh,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+/// Filters are on but nothing matches.
+class _NoMatches extends StatelessWidget {
+  const _NoMatches({required this.onClear});
+
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(32),
+      children: [
+        const SizedBox(height: 48),
+        const Icon(Icons.search_off_rounded, size: 48),
+        const SizedBox(height: 12),
+        const Text(
+          'No matches.\nTry a different search or clear the filters.',
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 12),
+        Center(
+          child: OutlinedButton(
+            onPressed: onClear,
+            child: const Text('Clear filters'),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -265,26 +359,6 @@ class _EmptyState extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
       ],
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('Could not load your history.'),
-          const SizedBox(height: 8),
-          OutlinedButton(onPressed: onRetry, child: const Text('Try again')),
-        ],
-      ),
     );
   }
 }

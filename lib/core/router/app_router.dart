@@ -4,7 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/accounts/presentation/accounts_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
+import '../../features/budgets/presentation/budgets_screen.dart';
+import '../../features/categories/presentation/categories_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/insights/presentation/insights_screen.dart';
+import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/transactions/presentation/history_screen.dart';
 import '../supabase/supabase_providers.dart';
 import 'app_shell.dart';
@@ -52,6 +56,32 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: '/',
                 name: 'home',
                 builder: (context, state) => const HomeScreen(),
+                routes: [
+                  // Opened from Home's "Manage" link; gets a back arrow.
+                  GoRoute(
+                    path: 'budgets',
+                    name: 'budgets',
+                    builder: (context, state) => const BudgetsScreen(),
+                  ),
+                  // Opened from the Categories icon on Home.
+                  GoRoute(
+                    path: 'categories',
+                    name: 'categories',
+                    builder: (context, state) => const CategoriesScreen(),
+                  ),
+                  // Opened from Home's Spending section.
+                  GoRoute(
+                    path: 'insights',
+                    name: 'insights',
+                    builder: (context, state) => const InsightsScreen(),
+                  ),
+                  // Opened from the gear icon on Home.
+                  GoRoute(
+                    path: 'settings',
+                    name: 'settings',
+                    builder: (context, state) => const SettingsScreen(),
+                  ),
+                ],
               ),
             ],
           ),

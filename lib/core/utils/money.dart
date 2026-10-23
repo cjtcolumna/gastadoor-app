@@ -12,6 +12,15 @@ class Money {
     return formatter.format(cents / 100);
   }
 
+  /// A short amount for chart axes, e.g. 2500000 cents -> "₱25K".
+  static String formatCompact(int cents, {String currency = defaultCurrency}) {
+    final formatter = NumberFormat.compactSimpleCurrency(
+      name: currency,
+      decimalDigits: 0,
+    );
+    return formatter.format(cents / 100);
+  }
+
   /// Turns cents into plain text for an input box, e.g. 123450 -> "1234.50".
   /// Uses whole-number math only, so there are no rounding surprises.
   static String toInputText(int cents) {

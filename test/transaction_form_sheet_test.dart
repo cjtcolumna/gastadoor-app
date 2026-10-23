@@ -335,4 +335,21 @@ void main() {
     expect(draft.accountId, 'gcash');
     expect(draft.toAccountId, 'cash');
   });
+
+  testWidgets('"+ New" adds a category without leaving the form', (
+    tester,
+  ) async {
+    await openSheet(tester);
+    await tapVisible(tester, find.byTooltip('New category'));
+    expect(find.text('New expense category'), findsOneWidget);
+  });
+
+  testWidgets('"+ New" on the Income tab makes an income category', (
+    tester,
+  ) async {
+    await openSheet(tester);
+    await tapVisible(tester, find.text('Income'));
+    await tapVisible(tester, find.byTooltip('New category'));
+    expect(find.text('New income category'), findsOneWidget);
+  });
 }

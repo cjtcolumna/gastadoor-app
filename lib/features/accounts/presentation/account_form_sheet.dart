@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/friendly_error.dart';
 import '../../../core/utils/money.dart';
 import '../../../core/widgets/money_text_field.dart';
 import '../data/accounts_provider.dart';
@@ -80,11 +81,11 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
     try {
       await action(ref.read(accountsProvider.notifier));
       if (mounted) Navigator.of(context).pop();
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         setState(() {
           _saving = false;
-          _error = 'Could not save. Check your internet connection.';
+          _error = friendlyError(e);
         });
       }
     }

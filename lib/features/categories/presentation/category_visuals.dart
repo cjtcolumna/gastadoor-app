@@ -32,7 +32,8 @@ const categoryIcons = <String, IconData>{
 const categoryColors = <String, Color>{
   'orange': Color(0xFFEF6C00),
   'blue': Color(0xFF1E88E5),
-  'amber': Color(0xFFFFA000),
+  // Deeper than Material amber so it stays visible on white (3:1 contrast).
+  'amber': Color(0xFFC98500),
   'pink': Color(0xFFD81B60),
   'red': Color(0xFFE53935),
   'purple': Color(0xFF8E24AA),
