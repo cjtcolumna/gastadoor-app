@@ -14,7 +14,7 @@ class FakeAccountsNotifier extends AccountsNotifier {
   FakeAccountsNotifier(this.start);
 
   final List<Account> start;
-  final added = <(String, AccountType, int)>[];
+  final added = <(String, AccountType, int, String?)>[];
   final saved = <Account>[];
 
   @override
@@ -25,8 +25,9 @@ class FakeAccountsNotifier extends AccountsNotifier {
     required String name,
     required AccountType type,
     required int openingBalanceCents,
+    String? parentId,
   }) async {
-    added.add((name, type, openingBalanceCents));
+    added.add((name, type, openingBalanceCents, parentId));
   }
 
   @override
@@ -39,7 +40,7 @@ class FakeAccountsNotifier extends AccountsNotifier {
   Future<void> archive(String id) async => archivedIds.add(id);
 
   @override
-  Future<void> restore(String id) async => restoredIds.add(id);
+  Future<void> restore(Account account) async => restoredIds.add(account.id);
 }
 
 const oldWallet = Account(
@@ -57,6 +58,28 @@ const cash = Account(
   type: AccountType.cash,
   openingBalanceCents: 50000,
 );
+const gotyme = Account(
+  id: 'g',
+  userId: 'u',
+  name: 'GoTyme',
+  type: AccountType.bank,
+);
+const travel = Account(
+  id: 't',
+  userId: 'u',
+  name: 'Travel',
+  type: AccountType.bank,
+  parentId: 'g',
+);
+const emergency = Account(
+  id: 'e',
+  userId: 'u',
+  name: 'Emergency Fund',
+  type: AccountType.bank,
+  parentId: 'g',
+);
+const gotymeBalances = {'g': 5000000, 't': 700000, 'e': 200000};
+
 const card = Account(
   id: '2',
   userId: 'u',
@@ -139,7 +162,7 @@ void main() {
     await tester.tap(saveButton('Add account'));
     await tester.pumpAndSettle();
 
-    expect(fake.added, [('GCash', AccountType.eWallet, 150050)]);
+    expect(fake.added, [('GCash', AccountType.eWallet, 150050, null)]);
     expect(find.text('New account'), findsNothing); // sheet closed
   });
 
@@ -226,5 +249,131 @@ void main() {
 
     expect(checkmarksShown(tester, find.text('E-wallet')), isFalse);
     expect(find.byIcon(Icons.phone_iphone_rounded), findsOneWidget);
+  });
+
+  group('sub-accounts', () {
+    testWidgets('a main account shows its total, then each pocket', (
+      tester,
+    ) async {
+      await pumpScreen(tester, [
+        gotyme,
+        travel,
+        emergency,
+      ], balances: gotymeBalances);
+
+      expect(find.text('Bank · 2 sub-accounts'), findsOneWidget);
+      // ₱50,000 + ₱7,000 + ₱2,000. Also the "Total balance" at the top.
+      expect(find.text('₱59,000.00'), findsNWidgets(2));
+      expect(find.text('Main balance'), findsOneWidget);
+      expect(find.text('₱50,000.00'), findsOneWidget);
+      expect(find.text('Travel'), findsOneWidget);
+      expect(find.text('₱7,000.00'), findsOneWidget);
+      expect(find.text('Emergency Fund'), findsOneWidget);
+      expect(find.text('₱2,000.00'), findsOneWidget);
+    });
+
+    testWidgets('"Add a sub-account" makes a pocket inside the account', (
+      tester,
+    ) async {
+      await pumpScreen(tester, [gotyme, cash]);
+      await tester.tap(find.text('GoTyme'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add a sub-account'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('New sub-account'), findsOneWidget);
+      // Same type as GoTyme, so no type chips.
+      expect(find.text('Bank, same as GoTyme'), findsOneWidget);
+      expect(find.widgetWithText(ChoiceChip, 'E-wallet'), findsNothing);
+
+      await tester.enterText(field('Name'), 'Travel');
+      await tester.enterText(field('Starting balance'), '7000');
+      await tester.tap(saveButton('Add sub-account'));
+      await tester.pumpAndSettle();
+
+      expect(fake.added, [('Travel', AccountType.bank, 700000, 'g')]);
+    });
+
+    testWidgets('"Inside account" turns a new account into a pocket', (
+      tester,
+    ) async {
+      await pumpScreen(tester, [gotyme, cash]);
+      await tester.tap(find.byTooltip('Add account'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('None (main account)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('GoTyme').last);
+      await tester.pumpAndSettle();
+
+      await tester.enterText(field('Name'), 'Emergency Fund');
+      await tester.tap(saveButton('Add sub-account'));
+      await tester.pumpAndSettle();
+      expect(fake.added, [('Emergency Fund', AccountType.bank, 0, 'g')]);
+    });
+
+    testWidgets('a pocket has no "Add a sub-account" (one level only)', (
+      tester,
+    ) async {
+      await pumpScreen(tester, [gotyme, travel]);
+      await tester.tap(find.text('Travel'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Edit sub-account'), findsOneWidget);
+      expect(find.text('Add a sub-account'), findsNothing);
+    });
+
+    testWidgets('an account with pockets cannot be moved into another', (
+      tester,
+    ) async {
+      await pumpScreen(tester, [gotyme, travel, cash]);
+      await tester.tap(find.text('GoTyme'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Inside account (optional)'), findsNothing);
+    });
+
+    testWidgets('archiving a main account warns about its pockets too', (
+      tester,
+    ) async {
+      await pumpScreen(tester, [
+        gotyme,
+        travel,
+        emergency,
+      ], balances: gotymeBalances);
+      await tester.tap(find.text('GoTyme'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Archive account'));
+      await tester.tap(find.text('Archive account'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('GoTyme still has ₱59,000.00'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Its 2 sub-accounts will be archived too'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('pockets fit the smallest iPhone with double-size text', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await pumpScreen(tester, [
+        gotyme,
+        travel,
+        emergency,
+      ], balances: gotymeBalances);
+      // Any overflow would be reported as an exception.
+      expect(tester.takeException(), isNull);
+      expect(find.text('Emergency Fund'), findsOneWidget);
+    });
   });
 }

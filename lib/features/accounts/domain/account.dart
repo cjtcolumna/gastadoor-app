@@ -23,6 +23,9 @@ abstract class Account with _$Account {
     @Default('PHP') String currency,
     @Default(0) int openingBalanceCents,
     @Default(false) bool archived,
+
+    /// Set for a sub-account: the id of the account it sits inside.
+    String? parentId,
     DateTime? createdAt,
   }) = _Account;
 

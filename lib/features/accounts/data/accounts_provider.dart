@@ -51,11 +51,13 @@ class AccountsNotifier extends AsyncNotifier<List<Account>> {
     required String name,
     required AccountType type,
     required int openingBalanceCents,
+    String? parentId,
   }) async {
     await _repo.create(
       name: name,
       type: type,
       openingBalanceCents: openingBalanceCents,
+      parentId: parentId,
     );
     await _reload();
   }
@@ -70,8 +72,8 @@ class AccountsNotifier extends AsyncNotifier<List<Account>> {
     await _reload();
   }
 
-  Future<void> restore(String id) async {
-    await _repo.restore(id);
+  Future<void> restore(Account account) async {
+    await _repo.restore(account);
     await _reload();
   }
 

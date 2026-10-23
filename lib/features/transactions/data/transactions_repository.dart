@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/dates.dart';
+import '../../accounts/data/accounts_provider.dart';
+import '../../accounts/domain/account_groups.dart';
 import '../domain/transaction.dart';
 import '../domain/history_filter.dart';
 import '../domain/month_totals.dart';
@@ -34,6 +36,7 @@ class TransactionsRepository {
     int page, {
     HistoryFilter filter = HistoryFilter.none,
     int pageSize = TransactionPage.defaultPageSize,
+    Set<String>? accountIds,
   }) async {
     final (from, to) = TransactionPage.rowRange(page, pageSize: pageSize);
     var query = _client
@@ -60,10 +63,12 @@ class TransactionsRepository {
     }
     final kind = filter.kind;
     if (kind != null) query = query.eq('kind', kind.name);
-    final accountId = filter.accountId;
-    if (accountId != null) {
-      // Money from this account, or transferred into it.
-      query = query.or('account_id.eq.$accountId,to_account_id.eq.$accountId');
+    // The picked account plus its pockets (passed in as [accountIds]).
+    final ids = accountIds ?? {?filter.accountId};
+    if (ids.isNotEmpty) {
+      final list = ids.join(',');
+      // Money from these accounts, or transferred into them.
+      query = query.or('account_id.in.($list),to_account_id.in.($list)');
     }
     final categoryId = filter.categoryId;
     if (categoryId != null) query = query.eq('category_id', categoryId);
@@ -164,9 +169,28 @@ final historyPageProvider =
       if (user == null) {
         return TransactionPage(items: const [], page: page, totalCount: 0);
       }
-      return ref
+      // Every account, active and archived, to name pockets and to find
+      // the pockets of the account picked in the filter.
+      final all = [
+        ...await ref.watch(accountsProvider.future),
+        ...await ref.watch(archivedAccountsProvider.future),
+      ];
+      final accountId = filter.accountId;
+      final result = await ref
           .watch(transactionsRepositoryProvider)
-          .fetchPage(page, filter: filter);
+          .fetchPage(
+            page,
+            filter: filter,
+            accountIds: accountId == null
+                ? null
+                : idWithChildren(accountId, all),
+          );
+      return TransactionPage(
+        items: labelAccounts(result.items, all),
+        page: result.page,
+        totalCount: result.totalCount,
+        pageSize: result.pageSize,
+      );
     });
 
 /// Which filters, and which page (0 = first).

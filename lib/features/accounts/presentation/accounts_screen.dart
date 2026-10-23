@@ -8,6 +8,7 @@ import '../../../core/widgets/screen_padding.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../data/accounts_provider.dart';
 import '../domain/account.dart';
+import '../domain/account_groups.dart';
 import '../domain/balances.dart';
 import 'account_balance_tile.dart';
 import 'account_form_sheet.dart';
@@ -89,18 +90,15 @@ class _AccountsList extends ConsumerWidget {
         const SizedBox(height: 8),
         AccountsCard(
           children: [
-            for (final account in accounts)
-              AccountBalanceTile(
-                account: account,
-                balanceCents: balanceOf(account, balances),
-                onTap: () => showAccountFormSheet(context, account: account),
-              ),
+            for (final group in groupAccounts(accounts))
+              _AccountGroupRows(group: group, balances: balances),
           ],
         ),
         Padding(
           padding: const EdgeInsets.all(12),
           child: Text(
-            'Tap an account to rename it or change its starting balance.',
+            'Tap an account to rename it, change its starting balance, '
+            'or add a sub-account (like Travel inside GoTyme).',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
@@ -108,6 +106,47 @@ class _AccountsList extends ConsumerWidget {
           ),
         ),
         const _ArchivedSection(),
+      ],
+    );
+  }
+}
+
+/// A main account and, if it has pockets, its "Main balance" and each
+/// pocket underneath. The big number is the total of all of them.
+class _AccountGroupRows extends StatelessWidget {
+  const _AccountGroupRows({required this.group, required this.balances});
+
+  final AccountGroup group;
+  final Map<String, int> balances;
+
+  @override
+  Widget build(BuildContext context) {
+    final parent = group.account;
+    void edit(Account a) => showAccountFormSheet(context, account: a);
+
+    return Column(
+      children: [
+        AccountBalanceTile(
+          account: parent,
+          balanceCents: group.totalCents(balances),
+          subtitle: groupSubtitle(group),
+          onTap: () => edit(parent),
+        ),
+        if (group.hasChildren) ...[
+          PocketTile(
+            name: 'Main balance',
+            isMain: true,
+            balanceCents: balanceOf(parent, balances),
+            onTap: () => edit(parent),
+          ),
+          for (final pocket in group.children)
+            PocketTile(
+              name: pocket.name,
+              balanceCents: balanceOf(pocket, balances),
+              onTap: () => edit(pocket),
+            ),
+          const SizedBox(height: 8),
+        ],
       ],
     );
   }
@@ -152,10 +191,15 @@ class _ArchivedSectionState extends ConsumerState<_ArchivedSection> {
           shape: const Border(),
           collapsedShape: const Border(),
           children: [
-            for (final account in archived) ...[
+            for (final account in inGroupOrder(archived)) ...[
               const Divider(height: 1),
               _ArchivedTile(
                 account: account,
+                // "GoTyme › Travel" for an archived pocket.
+                label: accountLabel(account, [
+                  ...archived,
+                  ...?ref.watch(accountsProvider).value,
+                ]),
                 balanceCents: balanceOf(account, balances),
               ),
             ],
@@ -167,9 +211,14 @@ class _ArchivedSectionState extends ConsumerState<_ArchivedSection> {
 }
 
 class _ArchivedTile extends ConsumerStatefulWidget {
-  const _ArchivedTile({required this.account, required this.balanceCents});
+  const _ArchivedTile({
+    required this.account,
+    required this.label,
+    required this.balanceCents,
+  });
 
   final Account account;
+  final String label;
   final int balanceCents;
 
   @override
@@ -183,7 +232,7 @@ class _ArchivedTileState extends ConsumerState<_ArchivedTile> {
     setState(() => _restoring = true);
     Object? failure;
     try {
-      await ref.read(accountsProvider.notifier).restore(widget.account.id);
+      await ref.read(accountsProvider.notifier).restore(widget.account);
     } catch (e) {
       failure = e;
     }
@@ -206,7 +255,7 @@ class _ArchivedTileState extends ConsumerState<_ArchivedTile> {
         foregroundColor: theme.colorScheme.onSurfaceVariant,
         child: Icon(widget.account.type.icon, size: 22),
       ),
-      title: Text(widget.account.name),
+      title: Text(widget.label),
       subtitle: Text(Money.format(widget.balanceCents)),
       trailing: _restoring
           ? const SizedBox.square(

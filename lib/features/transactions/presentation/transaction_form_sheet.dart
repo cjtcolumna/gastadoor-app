@@ -8,6 +8,7 @@ import '../../../core/utils/money.dart';
 import '../../../core/widgets/money_text_field.dart';
 import '../../accounts/data/accounts_provider.dart';
 import '../../accounts/domain/account.dart';
+import '../../accounts/domain/account_groups.dart';
 import '../../accounts/presentation/account_type_ui.dart';
 import '../../categories/data/categories_repository.dart';
 import '../../categories/domain/category.dart';
@@ -180,7 +181,10 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final keyboard = MediaQuery.viewInsetsOf(context).bottom;
-    final accounts = ref.watch(accountsProvider).value ?? const <Account>[];
+    // Each main account followed by its pockets (GoTyme, Travel, ...).
+    final accounts = inGroupOrder(
+      ref.watch(accountsProvider).value ?? const <Account>[],
+    );
     final categories = (ref.watch(categoriesProvider).value ?? const [])
         .where((c) => c.kind == _kind)
         .toList();
@@ -230,6 +234,7 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
               _AccountPicker(
                 // You can't transfer into the same account.
                 accounts: accounts.where((a) => a.id != accountId).toList(),
+                allAccounts: accounts,
                 selectedId: toAccountId,
                 emptyText: 'Add a second account to make transfers.',
                 onChanged: _saving
@@ -443,10 +448,15 @@ class _AccountPicker extends StatelessWidget {
     required this.selectedId,
     required this.onChanged,
     this.archivedAccount,
+    this.allAccounts,
     this.emptyText = 'No accounts yet. Add one in the Accounts tab.',
   });
 
   final List<Account> accounts;
+
+  /// Every account, used to name pockets "GoTyme › Travel" even when the
+  /// parent isn't one of the choices. Defaults to [accounts].
+  final List<Account>? allAccounts;
   final String? selectedId;
   final ValueChanged<String>? onChanged;
 
@@ -476,8 +486,13 @@ class _AccountPicker extends StatelessWidget {
           ),
         for (final account in accounts)
           ChoiceChip(
-            avatar: Icon(account.type.icon, size: 18),
-            label: Text(account.name),
+            avatar: Icon(
+              account.parentId == null
+                  ? account.type.icon
+                  : Icons.savings_rounded,
+              size: 18,
+            ),
+            label: Text(accountLabel(account, allAccounts ?? accounts)),
             selected: account.id == selectedId,
             onSelected: onChanged == null
                 ? null

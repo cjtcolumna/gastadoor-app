@@ -14,6 +14,7 @@ _Account _$AccountFromJson(Map<String, dynamic> json) => _Account(
   currency: json['currency'] as String? ?? 'PHP',
   openingBalanceCents: (json['opening_balance_cents'] as num?)?.toInt() ?? 0,
   archived: json['archived'] as bool? ?? false,
+  parentId: json['parent_id'] as String?,
   createdAt: json['created_at'] == null
       ? null
       : DateTime.parse(json['created_at'] as String),
@@ -27,6 +28,7 @@ Map<String, dynamic> _$AccountToJson(_Account instance) => <String, dynamic>{
   'currency': instance.currency,
   'opening_balance_cents': instance.openingBalanceCents,
   'archived': instance.archived,
+  'parent_id': instance.parentId,
   'created_at': instance.createdAt?.toIso8601String(),
 };
 

@@ -18,4 +18,15 @@ void main() {
     final text = archiveMessage('BPI Card', -12050);
     expect(text, startsWith('BPI Card still owes ₱120.50.'));
   });
+
+  test('mentions the sub-accounts that get archived too', () {
+    expect(
+      archiveMessage('GoTyme', 0, pockets: 1),
+      startsWith('Its sub-account will be archived too.'),
+    );
+    expect(
+      archiveMessage('GoTyme', 5900000, pockets: 2),
+      contains('Its 2 sub-accounts will be archived too.'),
+    );
+  });
 }

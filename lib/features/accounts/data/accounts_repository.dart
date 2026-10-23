@@ -44,11 +44,13 @@ class AccountsRepository {
     required String name,
     required AccountType type,
     int openingBalanceCents = 0,
+    String? parentId,
   }) async {
     await _client.from('accounts').insert({
       'name': name.trim(),
       'type': type.dbValue,
       'opening_balance_cents': openingBalanceCents,
+      'parent_id': parentId,
     });
   }
 
@@ -59,8 +61,15 @@ class AccountsRepository {
           'name': account.name.trim(),
           'type': account.type.dbValue,
           'opening_balance_cents': account.openingBalanceCents,
+          'parent_id': account.parentId,
         })
         .eq('id', account.id);
+    // Pockets always match their parent's type (GoTyme is a bank, so
+    // Travel is too).
+    await _client
+        .from('accounts')
+        .update({'type': account.type.dbValue})
+        .eq('parent_id', account.id);
   }
 
   /// Archived accounts, most recently changed first.
@@ -73,14 +82,26 @@ class AccountsRepository {
     return rows.map(Account.fromJson).toList();
   }
 
-  /// Hides the account but keeps its history.
+  /// Hides the account (and its pockets) but keeps their history.
   Future<void> archive(String id) async {
-    await _client.from('accounts').update({'archived': true}).eq('id', id);
+    await _client
+        .from('accounts')
+        .update({'archived': true})
+        .or('id.eq.$id,parent_id.eq.$id');
   }
 
-  /// Brings an archived account back.
-  Future<void> restore(String id) async {
-    await _client.from('accounts').update({'archived': false}).eq('id', id);
+  /// Brings an archived account back, with its pockets.
+  /// Restoring a pocket also restores its parent, so it has a home.
+  Future<void> restore(Account account) async {
+    final parentId = account.parentId;
+    await _client
+        .from('accounts')
+        .update({'archived': false})
+        .or(
+          parentId == null
+              ? 'id.eq.${account.id},parent_id.eq.${account.id}'
+              : 'id.eq.${account.id},id.eq.$parentId',
+        );
   }
 }
 

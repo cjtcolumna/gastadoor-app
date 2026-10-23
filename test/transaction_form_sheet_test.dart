@@ -352,4 +352,35 @@ void main() {
     await tapVisible(tester, find.byTooltip('New category'));
     expect(find.text('New income category'), findsOneWidget);
   });
+
+  testWidgets('an expense can come from a sub-account (pocket)', (
+    tester,
+  ) async {
+    const gotyme = Account(
+      id: 'g',
+      userId: 'u',
+      name: 'GoTyme',
+      type: AccountType.bank,
+    );
+    const travel = Account(
+      id: 't',
+      userId: 'u',
+      name: 'Travel',
+      type: AccountType.bank,
+      parentId: 'g',
+    );
+    // Travel was made after Cash, but is listed right after GoTyme.
+    await openSheet(tester, accounts: [gotyme, cashAccount, travel]);
+
+    final labels = tester
+        .widgetList<ChoiceChip>(find.byType(ChoiceChip))
+        .map((chip) => (chip.label as Text).data)
+        .where((l) => ['GoTyme', 'GoTyme › Travel', 'Cash'].contains(l));
+    expect(labels, ['GoTyme', 'GoTyme › Travel', 'Cash']);
+
+    await tester.enterText(amountField(), '2500');
+    await tapVisible(tester, find.text('GoTyme › Travel'));
+    await tapVisible(tester, save());
+    expect(actions.added.single.accountId, 't');
+  });
 }
