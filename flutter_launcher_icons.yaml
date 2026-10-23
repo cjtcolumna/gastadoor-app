@@ -1,0 +1,18 @@
+# App icon settings. Regenerate the icon files with:
+#   dart run flutter_launcher_icons
+# The artwork itself is drawn by tool/app_icon/app_icon_painter.dart.
+flutter_launcher_icons:
+  image_path: "assets/icon/app_icon.png"
+  ios: true
+  # Apple rejects icons with see-through pixels.
+  remove_alpha_ios: true
+  android: "launcher_icon"
+  # Android 8+: two layers that phones crop into their own shapes.
+  adaptive_icon_background: "assets/icon/app_icon_background.png"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+  min_sdk_android: 21
+  web:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
+    background_color: "#2E7D5B"
+    theme_color: "#2E7D5B"
