@@ -10,6 +10,7 @@ import '../../../core/widgets/skeleton.dart';
 import '../data/accounts_provider.dart';
 import '../domain/account.dart';
 import '../domain/balances.dart';
+import 'account_avatar.dart';
 import 'account_form_sheet.dart';
 import 'account_type_ui.dart';
 import 'pocket_actions_sheet.dart';
@@ -151,11 +152,25 @@ class _BalanceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = context.appColors;
-    final muted = theme.colorScheme.onSurfaceVariant;
+    final bank = bankOf(account);
+
+    // A known bank (GCash, BDO...) gets a banner in its own color, with
+    // white or dark text, whichever is easier to read on that color.
+    final banner = bank == null ? null : Color(bank.color);
+    final onBanner = banner == null
+        ? null
+        : ThemeData.estimateBrightnessForColor(banner) == Brightness.dark
+        ? Colors.white
+        : const Color(0xFF111111);
+    final text = onBanner ?? theme.colorScheme.onSurface;
+    final muted =
+        onBanner?.withValues(alpha: 0.8) ?? theme.colorScheme.onSurfaceVariant;
+    // Red doesn't show on a red bank's banner, so the minus sign is enough.
     Color amountColor(int cents) =>
-        cents < 0 ? colors.expense : theme.colorScheme.onSurface;
+        cents < 0 && banner == null ? colors.expense : text;
 
     return Card(
+      color: banner,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -163,16 +178,26 @@ class _BalanceCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: colors.incomeSoft,
-                  foregroundColor: theme.colorScheme.primary,
-                  child: Icon(account.type.icon, size: 18),
-                ),
+                if (bank != null)
+                  // A white frame so the icon stands out on the banner.
+                  Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: BankIcon(bank: bank, size: 32),
+                  )
+                else
+                  AccountAvatar(account: account, size: 32),
                 const SizedBox(width: 10),
-                Text(
-                  account.type.label,
-                  style: theme.textTheme.bodyMedium?.copyWith(color: muted),
+                Expanded(
+                  child: Text(
+                    bank == null
+                        ? account.type.label
+                        : '${bank.name} · ${account.type.label}',
+                    style: theme.textTheme.bodyMedium?.copyWith(color: muted),
+                  ),
                 ),
               ],
             ),
@@ -197,7 +222,7 @@ class _BalanceCard extends StatelessWidget {
             ),
             if (hasPockets) ...[
               const SizedBox(height: 12),
-              const Divider(height: 1),
+              Divider(height: 1, color: onBanner?.withValues(alpha: 0.25)),
               const SizedBox(height: 12),
               Wrap(
                 alignment: WrapAlignment.spaceBetween,

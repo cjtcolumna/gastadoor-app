@@ -571,4 +571,79 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  group('bank icons', () {
+    bool showsIcon(WidgetTester tester, String id) => tester
+        .widgetList<Image>(find.byType(Image))
+        .any(
+          (img) =>
+              img.image is AssetImage &&
+              (img.image as AssetImage).assetName == 'assets/banks/$id.png',
+        );
+
+    testWidgets('a known bank shows its own icon, others the usual one', (
+      tester,
+    ) async {
+      await pumpScreen(tester, [gotyme, cash]);
+      expect(showsIcon(tester, 'gotyme'), isTrue);
+      // Cash isn't a bank: the round icon, no picture.
+      expect(find.byIcon(Icons.payments_rounded), findsOneWidget);
+    });
+
+    testWidgets('typing a bank name shows a preview and picks the type', (
+      tester,
+    ) async {
+      await pumpScreen(tester, [cash]);
+      await tester.tap(find.byTooltip('Add account'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(field('Name'), 'GCash Wallet');
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Looks like GCash'), findsOneWidget);
+      expect(showsIcon(tester, 'gcash'), isTrue);
+
+      await tester.tap(saveButton('Add account'));
+      await tester.pumpAndSettle();
+      expect(fake.added.single.$2, AccountType.eWallet);
+    });
+
+    testWidgets('a type picked by hand is not changed by the name', (
+      tester,
+    ) async {
+      await pumpScreen(tester, [cash]);
+      await tester.tap(find.byTooltip('Add account'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Credit card'));
+      await tester.enterText(field('Name'), 'BPI Card');
+      await tester.pumpAndSettle();
+      await tester.tap(saveButton('Add account'));
+      await tester.pumpAndSettle();
+      expect(fake.added.single.$2, AccountType.creditCard);
+    });
+
+    testWidgets("a bank's page has a banner in its color", (tester) async {
+      await pumpScreen(
+        tester,
+        [gotyme, travel],
+        balances: gotymeBalances,
+        location: '/accounts/g',
+      );
+      final banner = tester.widget<Card>(find.byType(Card).first);
+      expect(banner.color, const Color(0xFF05E6FA));
+      expect(find.text('GoTyme Bank · Bank'), findsOneWidget);
+    });
+
+    testWidgets('sub-accounts keep their own icons', (tester) async {
+      const bpiPocket = Account(
+        id: 'p',
+        userId: 'u',
+        name: 'BPI',
+        type: AccountType.bank,
+        parentId: 'g',
+      );
+      await pumpScreen(tester, [gotyme, bpiPocket], location: '/accounts/g');
+      expect(showsIcon(tester, 'bpi'), isFalse);
+    });
+  });
 }

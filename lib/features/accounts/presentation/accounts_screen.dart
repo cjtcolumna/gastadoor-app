@@ -11,6 +11,7 @@ import '../data/accounts_provider.dart';
 import '../domain/account.dart';
 import '../domain/account_groups.dart';
 import '../domain/balances.dart';
+import 'account_avatar.dart';
 import 'account_balance_tile.dart';
 import 'account_form_sheet.dart';
 import 'account_type_ui.dart';
@@ -217,11 +218,14 @@ class _ArchivedTileState extends ConsumerState<_ArchivedTile> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: theme.colorScheme.surfaceContainerHighest,
-        foregroundColor: theme.colorScheme.onSurfaceVariant,
-        child: Icon(widget.account.type.icon, size: 22),
-      ),
+      leading: bankOf(widget.account) != null
+          // Faded, to show it's archived.
+          ? Opacity(opacity: 0.5, child: AccountAvatar(account: widget.account))
+          : CircleAvatar(
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+              foregroundColor: theme.colorScheme.onSurfaceVariant,
+              child: Icon(widget.account.type.icon, size: 22),
+            ),
       title: Text(widget.label),
       subtitle: Text(Money.format(widget.balanceCents)),
       trailing: _restoring

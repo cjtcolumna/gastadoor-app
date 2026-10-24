@@ -7,6 +7,8 @@ import '../../../core/widgets/money_text_field.dart';
 import '../data/accounts_provider.dart';
 import '../domain/account.dart';
 import '../domain/balances.dart';
+import '../domain/ph_banks.dart';
+import 'account_avatar.dart';
 import 'account_type_ui.dart';
 
 /// Opens the add/edit form for a main account (Cash, GoTyme, BDO...) as a
@@ -67,6 +69,10 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
         : Money.toInputText(widget.account!.openingBalanceCents),
   );
   late AccountType _type = widget.account?.type ?? AccountType.cash;
+
+  /// True once the person taps a type chip themselves. Until then, a new
+  /// account's type follows the bank in its name (GCash -> E-wallet).
+  bool _typePicked = false;
   bool _saving = false;
   String? _error;
 
@@ -116,6 +122,17 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
         existing.copyWith(name: name, type: _type, openingBalanceCents: cents),
       );
     });
+  }
+
+  /// For a new account, picks the type that fits the bank in the name
+  /// (unless the person already picked one).
+  void _guessType(String name) {
+    if (_isEditing || _typePicked) return;
+    final bank = bankForName(name);
+    if (bank == null) return;
+    setState(
+      () => _type = bank.isWallet ? AccountType.eWallet : AccountType.bank,
+    );
   }
 
   /// Asks first, and warns if the account still has money in it (or owes).
@@ -182,11 +199,27 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
               maxLength: 80,
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
+              onChanged: _guessType,
+            ),
+            // "Looks like GoTyme Bank" with its icon, while typing.
+            ValueListenableBuilder(
+              valueListenable: _nameController,
+              builder: (context, value, _) {
+                final bank = bankForName(value.text);
+                return bank == null
+                    ? const SizedBox.shrink()
+                    : _BankPreview(bank: bank);
+              },
             ),
             const SizedBox(height: 8),
             _TypePicker(
               selected: _type,
-              onChanged: _saving ? null : (t) => setState(() => _type = t),
+              onChanged: _saving
+                  ? null
+                  : (t) => setState(() {
+                      _type = t;
+                      _typePicked = true;
+                    }),
             ),
             const SizedBox(height: 20),
             MoneyTextField(
@@ -225,6 +258,35 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Shown under the name when it matches a known bank.
+class _BankPreview extends StatelessWidget {
+  const _BankPreview({required this.bank});
+
+  final PhBank bank;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          BankIcon(bank: bank, size: 28),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Looks like ${bank.name}. Its icon and color will be used.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

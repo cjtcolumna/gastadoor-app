@@ -258,10 +258,13 @@ void main() {
       find.byType(SegmentedButton<TransactionKind>),
     );
     expect(kindSwitch.showSelectedIcon, isFalse);
-    // The Income arrow, Salary icon, and GCash icon are all still shown.
+    // The Income arrow, Salary icon, and GCash's own icon are all shown.
     expect(find.byIcon(Icons.south_west_rounded), findsOneWidget);
     expect(find.byIcon(Icons.work_rounded), findsOneWidget);
-    expect(find.byIcon(Icons.phone_iphone_rounded), findsOneWidget);
+    expect(
+      find.image(const AssetImage('assets/banks/gcash.png')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a transfer moves money from one account to another', (

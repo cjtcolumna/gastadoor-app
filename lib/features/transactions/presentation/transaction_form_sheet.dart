@@ -10,7 +10,7 @@ import '../../accounts/data/accounts_provider.dart';
 import '../../accounts/domain/account.dart';
 import '../../accounts/domain/account_groups.dart';
 import '../../accounts/presentation/account_type_ui.dart';
-import '../../accounts/presentation/pocket_visuals.dart';
+import '../../accounts/presentation/account_avatar.dart';
 import '../../categories/data/categories_repository.dart';
 import '../../categories/domain/category.dart';
 import '../../categories/presentation/category_form_sheet.dart';
@@ -511,7 +511,7 @@ class _AccountPicker extends StatelessWidget {
           ),
         for (final account in accounts)
           ChoiceChip(
-            avatar: Icon(accountIconFor(account), size: 18),
+            avatar: AccountAvatar(account: account, size: 20),
             label: Text(accountLabel(account, allAccounts ?? accounts)),
             selected: account.id == selectedId,
             onSelected: onChanged == null

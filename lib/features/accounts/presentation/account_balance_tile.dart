@@ -4,6 +4,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/money.dart';
 import '../domain/account.dart';
 import '../domain/account_groups.dart';
+import 'account_avatar.dart';
 import 'account_type_ui.dart';
 
 /// The line under a main account's name: "Bank", or "Bank · 2 sub-accounts".
@@ -65,11 +66,8 @@ class AccountBalanceTile extends StatelessWidget {
     );
 
     return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: money.incomeSoft,
-        foregroundColor: theme.colorScheme.primary,
-        child: Icon(account.type.icon, size: 22),
-      ),
+      // The bank's own icon (GCash, BDO...) or the usual round icon.
+      leading: AccountAvatar(account: account),
       title: Text(
         account.name,
         style: const TextStyle(fontWeight: FontWeight.w600),

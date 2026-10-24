@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import '../../accounts/data/accounts_provider.dart';
 import '../../accounts/domain/account.dart';
 import '../../accounts/domain/account_groups.dart';
-import '../../accounts/presentation/pocket_visuals.dart';
+import '../../accounts/presentation/account_avatar.dart';
 import '../../categories/data/categories_repository.dart';
 import '../../categories/presentation/category_visuals.dart';
 import '../data/transactions_repository.dart';
@@ -111,7 +111,7 @@ class HistoryFilterBar extends ConsumerWidget {
                         a.archived
                             ? '${accountLabel(a, accounts)} (archived)'
                             : accountLabel(a, accounts),
-                        Icon(accountIconFor(a)),
+                        AccountAvatar(account: a, size: 28),
                       ),
                   ],
                   onPicked: (id) =>
