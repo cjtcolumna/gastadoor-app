@@ -82,6 +82,11 @@ void main() {
   testWidgets('Home never invites you to add a budget before it knows', (
     tester,
   ) async {
+    // A tall screen, so the Budgets section (below the spending chart)
+    // is built without scrolling.
+    tester.view.physicalSize = const Size(400, 2000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [

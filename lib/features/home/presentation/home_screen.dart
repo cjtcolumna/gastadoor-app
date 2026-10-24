@@ -61,9 +61,10 @@ class HomeScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             const _MonthSummary(),
             const SizedBox(height: 28),
-            const _BudgetsSection(),
-            const SizedBox(height: 28),
+            // Where the money went comes first, then how budgets are doing.
             const _SpendingSection(),
+            const SizedBox(height: 28),
+            const _BudgetsSection(),
             const SizedBox(height: 28),
             const _AccountsSection(),
             if (!supabaseReady) ...[
@@ -333,6 +334,7 @@ class _SpendingSection extends ConsumerWidget {
             slices: spendingByCategory(month),
             categoriesById: byId,
             maxRows: 3,
+            chartSize: 180, // a bit smaller than on the Insights page
           ),
       ],
     );
