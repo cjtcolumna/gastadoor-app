@@ -63,15 +63,3 @@ Set<String> idWithChildren(String id, List<Account> all) => {
   for (final a in all)
     if (a.parentId == id) a.id,
 };
-
-/// Accounts that [editing] could be moved inside: top-level accounts other
-/// than itself. Empty if [editing] has pockets of its own (one level only).
-List<Account> parentOptions(Account? editing, List<Account> active) {
-  if (editing != null && active.any((a) => a.parentId == editing.id)) {
-    return const [];
-  }
-  return [
-    for (final a in active)
-      if (a.parentId == null && a.id != editing?.id) a,
-  ];
-}

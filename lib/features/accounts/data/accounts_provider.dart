@@ -52,12 +52,16 @@ class AccountsNotifier extends AsyncNotifier<List<Account>> {
     required AccountType type,
     required int openingBalanceCents,
     String? parentId,
+    String? icon,
+    int? goalCents,
   }) async {
     await _repo.create(
       name: name,
       type: type,
       openingBalanceCents: openingBalanceCents,
       parentId: parentId,
+      icon: icon,
+      goalCents: goalCents,
     );
     await _reload();
   }

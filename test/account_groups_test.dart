@@ -77,19 +77,4 @@ void main() {
     expect(idWithChildren('g', all), {'g', 't', 'e'});
     expect(idWithChildren('t', all), {'t'});
   });
-
-  group('parentOptions (one level only)', () {
-    test('a new account can go inside any top-level account', () {
-      expect(parentOptions(null, all).map((a) => a.name), ['GoTyme', 'Cash']);
-    });
-
-    test("an account can't go inside itself or another pocket", () {
-      expect(parentOptions(cash, all).map((a) => a.name), ['GoTyme']);
-      expect(parentOptions(travel, all).map((a) => a.name), ['GoTyme', 'Cash']);
-    });
-
-    test('an account that has pockets cannot become a pocket', () {
-      expect(parentOptions(gotyme, all), isEmpty);
-    });
-  });
 }

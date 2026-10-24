@@ -6,18 +6,13 @@ import '../../../core/utils/money.dart';
 import '../../../core/widgets/money_text_field.dart';
 import '../data/accounts_provider.dart';
 import '../domain/account.dart';
-import '../domain/account_groups.dart';
 import '../domain/balances.dart';
 import 'account_type_ui.dart';
 
-/// Opens the add/edit form as a panel that slides up from the bottom.
-/// Pass [account] to edit it, or leave it null to add a new one.
-/// Pass [parent] to add a new sub-account inside that account.
-Future<void> showAccountFormSheet(
-  BuildContext context, {
-  Account? account,
-  Account? parent,
-}) {
+/// Opens the add/edit form for a main account (Cash, GoTyme, BDO...) as a
+/// panel that slides up from the bottom. Pass [account] to edit it, or
+/// leave it null to add a new one. Sub-accounts use `PocketFormSheet`.
+Future<void> showAccountFormSheet(BuildContext context, {Account? account}) {
   return showModalBottomSheet<void>(
     context: context,
     // Open above the whole app, so the floating tab bar can't cover the form.
@@ -25,7 +20,7 @@ Future<void> showAccountFormSheet(
     isScrollControlled: true, // lets the sheet grow above the keyboard
     useSafeArea: true,
     showDragHandle: true,
-    builder: (_) => AccountFormSheet(account: account, parent: parent),
+    builder: (_) => AccountFormSheet(account: account),
   );
 }
 
@@ -53,12 +48,9 @@ String archiveMessage(String name, int balanceCents, {int pockets = 0}) {
 }
 
 class AccountFormSheet extends ConsumerStatefulWidget {
-  const AccountFormSheet({super.key, this.account, this.parent});
+  const AccountFormSheet({super.key, this.account});
 
   final Account? account;
-
-  /// For a new sub-account: the account it goes inside.
-  final Account? parent;
 
   @override
   ConsumerState<AccountFormSheet> createState() => _AccountFormSheetState();
@@ -74,11 +66,7 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
         ? ''
         : Money.toInputText(widget.account!.openingBalanceCents),
   );
-  late AccountType _type =
-      widget.account?.type ?? widget.parent?.type ?? AccountType.cash;
-
-  /// The account this one sits inside, or null for a main account.
-  late String? _parentId = widget.account?.parentId ?? widget.parent?.id;
+  late AccountType _type = widget.account?.type ?? AccountType.cash;
   bool _saving = false;
   String? _error;
 
@@ -110,30 +98,22 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
     }
   }
 
-  void _save(Account? parent) {
+  void _save() {
     if (!_formKey.currentState!.validate()) return;
     final name = _nameController.text.trim();
     final cents = Money.parseToCents(_balanceController.text) ?? 0;
-    // A pocket always has its parent's type.
-    final type = parent?.type ?? _type;
 
     _run((accounts) {
       final existing = widget.account;
       if (existing == null) {
         return accounts.add(
           name: name,
-          type: type,
+          type: _type,
           openingBalanceCents: cents,
-          parentId: parent?.id,
         );
       }
       return accounts.save(
-        existing.copyWith(
-          name: name,
-          type: type,
-          openingBalanceCents: cents,
-          parentId: parent?.id,
-        ),
+        existing.copyWith(name: name, type: _type, openingBalanceCents: cents),
       );
     });
   }
@@ -144,7 +124,7 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
     final active = ref.read(accountsProvider).value ?? const <Account>[];
     final balances = ref.read(accountBalancesProvider).value ?? const {};
     final pockets = active.where((a) => a.parentId == account.id).toList();
-    // A parent's warning uses the total, since its pockets go too.
+    // The warning uses the total, since its sub-accounts are archived too.
     final balance = netWorthCents([account, ...pockets], balances);
 
     final sure = await showDialog<bool>(
@@ -170,29 +150,11 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
     await _run((accounts) => accounts.archive(account.id));
   }
 
-  /// Closes this form and opens a new one for a pocket inside this account.
-  void _addPocket() {
-    final account = widget.account!;
-    final navigator = Navigator.of(context);
-    navigator.pop();
-    showAccountFormSheet(navigator.context, parent: account);
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     // Push the form up when the on-screen keyboard opens.
     final keyboard = MediaQuery.viewInsetsOf(context).bottom;
-    final active = ref.watch(accountsProvider).value ?? const <Account>[];
-    final options = parentOptions(widget.account, active);
-    final parent = options.where((a) => a.id == _parentId).firstOrNull;
-    final isPocket = parent != null;
-    final title = switch ((_isEditing, isPocket)) {
-      (true, true) => 'Edit sub-account',
-      (true, false) => 'Edit account',
-      (false, true) => 'New sub-account',
-      (false, false) => 'New account',
-    };
 
     // Scrollable, so every field stays reachable on small screens
     // or when the keyboard takes up half the screen.
@@ -204,49 +166,34 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(title, style: theme.textTheme.titleLarge),
+            Text(
+              _isEditing ? 'Edit account' : 'New account',
+              style: theme.textTheme.titleLarge,
+            ),
             const SizedBox(height: 20),
             TextFormField(
               controller: _nameController,
               enabled: !_saving,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Name',
-                hintText: isPocket
-                    ? 'e.g. Travel, Emergency Fund'
-                    : 'e.g. GCash, BDO Savings',
+                hintText: 'e.g. GCash, BDO Savings',
               ),
               textCapitalization: TextCapitalization.words,
               maxLength: 80,
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
             ),
-            if (options.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              _ParentPicker(
-                options: options,
-                selectedId: parent?.id,
-                onChanged: _saving
-                    ? null
-                    : (id) => setState(() => _parentId = id),
-              ),
-              const SizedBox(height: 16),
-            ] else
-              const SizedBox(height: 8),
-            if (isPocket)
-              // Pockets share their parent's type, so no picker.
-              _SameTypeNote(parent: parent)
-            else
-              _TypePicker(
-                selected: _type,
-                onChanged: _saving ? null : (t) => setState(() => _type = t),
-              ),
+            const SizedBox(height: 8),
+            _TypePicker(
+              selected: _type,
+              onChanged: _saving ? null : (t) => setState(() => _type = t),
+            ),
             const SizedBox(height: 20),
             MoneyTextField(
               controller: _balanceController,
               label: 'Starting balance',
-              helperText: isPocket
-                  ? 'Money already set aside in this pocket'
-                  : 'Use a minus sign for money you owe, like a card bill',
+              helperText:
+                  'Use a minus sign for money you owe, like a card bill',
               allowNegative: true,
               required: false,
               enabled: !_saving,
@@ -257,7 +204,7 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
             ],
             const SizedBox(height: 20),
             FilledButton(
-              onPressed: _saving ? null : () => _save(parent),
+              onPressed: _saving ? null : _save,
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(52),
               ),
@@ -266,107 +213,19 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
                       dimension: 22,
                       child: CircularProgressIndicator(strokeWidth: 2.5),
                     )
-                  : Text(
-                      _isEditing
-                          ? 'Save'
-                          : isPocket
-                          ? 'Add sub-account'
-                          : 'Add account',
-                    ),
+                  : Text(_isEditing ? 'Save' : 'Add account'),
             ),
-            // Only main accounts can hold pockets (one level only).
-            if (_isEditing && widget.account!.parentId == null)
-              TextButton.icon(
-                onPressed: _saving ? null : _addPocket,
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Add a sub-account'),
-              ),
             if (_isEditing)
               TextButton(
                 onPressed: _saving ? null : _archive,
                 style: TextButton.styleFrom(
                   foregroundColor: theme.colorScheme.error,
                 ),
-                child: Text(
-                  isPocket ? 'Archive sub-account' : 'Archive account',
-                ),
+                child: const Text('Archive account'),
               ),
           ],
         ),
       ),
-    );
-  }
-}
-
-/// "Inside account": None (a main account), or one of the main accounts.
-class _ParentPicker extends StatelessWidget {
-  const _ParentPicker({
-    required this.options,
-    required this.selectedId,
-    required this.onChanged,
-  });
-
-  final List<Account> options;
-  final String? selectedId;
-  final ValueChanged<String?>? onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButtonFormField<String?>(
-      // A new key when the choice changes from outside, so it redraws.
-      key: ValueKey(selectedId),
-      initialValue: selectedId,
-      isExpanded: true,
-      icon: const Icon(Icons.expand_more_rounded),
-      decoration: const InputDecoration(
-        labelText: 'Inside account (optional)',
-        helperText: 'Make this a pocket, like Travel inside GoTyme',
-      ),
-      items: [
-        const DropdownMenuItem(value: null, child: Text('None (main account)')),
-        for (final a in options)
-          DropdownMenuItem(
-            value: a.id,
-            child: Row(
-              children: [
-                Icon(a.type.icon, size: 20),
-                const SizedBox(width: 12),
-                Flexible(child: Text(a.name, overflow: TextOverflow.ellipsis)),
-              ],
-            ),
-          ),
-      ],
-      onChanged: onChanged,
-    );
-  }
-}
-
-/// Shown instead of the type chips for a pocket: "Bank, same as GoTyme".
-class _SameTypeNote extends StatelessWidget {
-  const _SameTypeNote({required this.parent});
-
-  final Account parent;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        Icon(
-          parent.type.icon,
-          size: 18,
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            '${parent.type.label}, same as ${parent.name}',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

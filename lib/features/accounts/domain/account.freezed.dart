@@ -17,7 +17,9 @@ T _$identity<T>(T value) => value;
 mixin _$Account {
 
  String get id; String get userId; String get name; AccountType get type; String get currency; int get openingBalanceCents; bool get archived;/// Set for a sub-account: the id of the account it sits inside.
- String? get parentId; DateTime? get createdAt;
+ String? get parentId;/// Sub-accounts only: the icon name, e.g. 'flight'. Null = piggy bank.
+ String? get icon;/// Sub-accounts only: the savings goal in cents. Null = no goal.
+ int? get goalCents; DateTime? get createdAt;
 /// Create a copy of Account
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -31,20 +33,20 @@ $AccountCopyWith<Account> get copyWith => _$AccountCopyWithImpl<Account>(this as
 @override
 bool operator ==(Object other) {
   final _this = this as Account;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Account&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.userId, _this.userId) || other.userId == _this.userId)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.type, _this.type) || other.type == _this.type)&&(identical(other.currency, _this.currency) || other.currency == _this.currency)&&(identical(other.openingBalanceCents, _this.openingBalanceCents) || other.openingBalanceCents == _this.openingBalanceCents)&&(identical(other.archived, _this.archived) || other.archived == _this.archived)&&(identical(other.parentId, _this.parentId) || other.parentId == _this.parentId)&&(identical(other.createdAt, _this.createdAt) || other.createdAt == _this.createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Account&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.userId, _this.userId) || other.userId == _this.userId)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.type, _this.type) || other.type == _this.type)&&(identical(other.currency, _this.currency) || other.currency == _this.currency)&&(identical(other.openingBalanceCents, _this.openingBalanceCents) || other.openingBalanceCents == _this.openingBalanceCents)&&(identical(other.archived, _this.archived) || other.archived == _this.archived)&&(identical(other.parentId, _this.parentId) || other.parentId == _this.parentId)&&(identical(other.icon, _this.icon) || other.icon == _this.icon)&&(identical(other.goalCents, _this.goalCents) || other.goalCents == _this.goalCents)&&(identical(other.createdAt, _this.createdAt) || other.createdAt == _this.createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Account;
-  return Object.hash(runtimeType,_this.id,_this.userId,_this.name,_this.type,_this.currency,_this.openingBalanceCents,_this.archived,_this.parentId,_this.createdAt);
+  return Object.hash(runtimeType,_this.id,_this.userId,_this.name,_this.type,_this.currency,_this.openingBalanceCents,_this.archived,_this.parentId,_this.icon,_this.goalCents,_this.createdAt);
 }
 
 @override
 String toString() {
   final _this = this as Account;
-  return 'Account(id: ${_this.id}, userId: ${_this.userId}, name: ${_this.name}, type: ${_this.type}, currency: ${_this.currency}, openingBalanceCents: ${_this.openingBalanceCents}, archived: ${_this.archived}, parentId: ${_this.parentId}, createdAt: ${_this.createdAt})';
+  return 'Account(id: ${_this.id}, userId: ${_this.userId}, name: ${_this.name}, type: ${_this.type}, currency: ${_this.currency}, openingBalanceCents: ${_this.openingBalanceCents}, archived: ${_this.archived}, parentId: ${_this.parentId}, icon: ${_this.icon}, goalCents: ${_this.goalCents}, createdAt: ${_this.createdAt})';
 }
 
 
@@ -55,7 +57,7 @@ abstract mixin class $AccountCopyWith<$Res>  {
   factory $AccountCopyWith(Account value, $Res Function(Account) _then) = _$AccountCopyWithImpl;
 @useResult
 $Res call({
- String id, String userId, String name, AccountType type, String currency, int openingBalanceCents, bool archived, String? parentId, DateTime? createdAt
+ String id, String userId, String name, AccountType type, String currency, int openingBalanceCents, bool archived, String? parentId, String? icon, int? goalCents, DateTime? createdAt
 });
 
 
@@ -72,7 +74,7 @@ class _$AccountCopyWithImpl<$Res>
 
 /// Create a copy of Account
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? userId = null,Object? name = null,Object? type = null,Object? currency = null,Object? openingBalanceCents = null,Object? archived = null,Object? parentId = freezed,Object? createdAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? userId = null,Object? name = null,Object? type = null,Object? currency = null,Object? openingBalanceCents = null,Object? archived = null,Object? parentId = freezed,Object? icon = freezed,Object? goalCents = freezed,Object? createdAt = freezed,}) {
   return _then(Account(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
@@ -82,7 +84,9 @@ as AccountType,currency: null == currency ? _self.currency : currency // ignore:
 as String,openingBalanceCents: null == openingBalanceCents ? _self.openingBalanceCents : openingBalanceCents // ignore: cast_nullable_to_non_nullable
 as int,archived: null == archived ? _self.archived : archived // ignore: cast_nullable_to_non_nullable
 as bool,parentId: freezed == parentId ? _self.parentId : parentId // ignore: cast_nullable_to_non_nullable
-as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,icon: freezed == icon ? _self.icon : icon // ignore: cast_nullable_to_non_nullable
+as String?,goalCents: freezed == goalCents ? _self.goalCents : goalCents // ignore: cast_nullable_to_non_nullable
+as int?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,
   ));
 }
@@ -168,10 +172,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String userId,  String name,  AccountType type,  String currency,  int openingBalanceCents,  bool archived,  String? parentId,  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String userId,  String name,  AccountType type,  String currency,  int openingBalanceCents,  bool archived,  String? parentId,  String? icon,  int? goalCents,  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Account() when $default != null:
-return $default(_that.id,_that.userId,_that.name,_that.type,_that.currency,_that.openingBalanceCents,_that.archived,_that.parentId,_that.createdAt);case _:
+return $default(_that.id,_that.userId,_that.name,_that.type,_that.currency,_that.openingBalanceCents,_that.archived,_that.parentId,_that.icon,_that.goalCents,_that.createdAt);case _:
   return orElse();
 
 }
@@ -189,10 +193,10 @@ return $default(_that.id,_that.userId,_that.name,_that.type,_that.currency,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String userId,  String name,  AccountType type,  String currency,  int openingBalanceCents,  bool archived,  String? parentId,  DateTime? createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String userId,  String name,  AccountType type,  String currency,  int openingBalanceCents,  bool archived,  String? parentId,  String? icon,  int? goalCents,  DateTime? createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _Account():
-return $default(_that.id,_that.userId,_that.name,_that.type,_that.currency,_that.openingBalanceCents,_that.archived,_that.parentId,_that.createdAt);case _:
+return $default(_that.id,_that.userId,_that.name,_that.type,_that.currency,_that.openingBalanceCents,_that.archived,_that.parentId,_that.icon,_that.goalCents,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -209,10 +213,10 @@ return $default(_that.id,_that.userId,_that.name,_that.type,_that.currency,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String userId,  String name,  AccountType type,  String currency,  int openingBalanceCents,  bool archived,  String? parentId,  DateTime? createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String userId,  String name,  AccountType type,  String currency,  int openingBalanceCents,  bool archived,  String? parentId,  String? icon,  int? goalCents,  DateTime? createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Account() when $default != null:
-return $default(_that.id,_that.userId,_that.name,_that.type,_that.currency,_that.openingBalanceCents,_that.archived,_that.parentId,_that.createdAt);case _:
+return $default(_that.id,_that.userId,_that.name,_that.type,_that.currency,_that.openingBalanceCents,_that.archived,_that.parentId,_that.icon,_that.goalCents,_that.createdAt);case _:
   return null;
 
 }
@@ -224,7 +228,7 @@ return $default(_that.id,_that.userId,_that.name,_that.type,_that.currency,_that
 @JsonSerializable()
 
 class _Account implements Account {
-  const _Account({required this.id, required this.userId, required this.name, required this.type, this.currency = 'PHP', this.openingBalanceCents = 0, this.archived = false, this.parentId, this.createdAt});
+  const _Account({required this.id, required this.userId, required this.name, required this.type, this.currency = 'PHP', this.openingBalanceCents = 0, this.archived = false, this.parentId, this.icon, this.goalCents, this.createdAt});
   factory _Account.fromJson(Map<String, dynamic> json) => _$AccountFromJson(json);
 
 @override final  String id;
@@ -236,6 +240,10 @@ class _Account implements Account {
 @override@JsonKey() final  bool archived;
 /// Set for a sub-account: the id of the account it sits inside.
 @override final  String? parentId;
+/// Sub-accounts only: the icon name, e.g. 'flight'. Null = piggy bank.
+@override final  String? icon;
+/// Sub-accounts only: the savings goal in cents. Null = no goal.
+@override final  int? goalCents;
 @override final  DateTime? createdAt;
 
 /// Create a copy of Account
@@ -251,18 +259,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Account&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.name, name) || other.name == name)&&(identical(other.type, type) || other.type == type)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.openingBalanceCents, openingBalanceCents) || other.openingBalanceCents == openingBalanceCents)&&(identical(other.archived, archived) || other.archived == archived)&&(identical(other.parentId, parentId) || other.parentId == parentId)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Account&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.name, name) || other.name == name)&&(identical(other.type, type) || other.type == type)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.openingBalanceCents, openingBalanceCents) || other.openingBalanceCents == openingBalanceCents)&&(identical(other.archived, archived) || other.archived == archived)&&(identical(other.parentId, parentId) || other.parentId == parentId)&&(identical(other.icon, icon) || other.icon == icon)&&(identical(other.goalCents, goalCents) || other.goalCents == goalCents)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,userId,name,type,currency,openingBalanceCents,archived,parentId,createdAt);
+    return Object.hash(runtimeType,id,userId,name,type,currency,openingBalanceCents,archived,parentId,icon,goalCents,createdAt);
 }
 
 @override
 String toString() {
-    return 'Account(id: $id, userId: $userId, name: $name, type: $type, currency: $currency, openingBalanceCents: $openingBalanceCents, archived: $archived, parentId: $parentId, createdAt: $createdAt)';
+    return 'Account(id: $id, userId: $userId, name: $name, type: $type, currency: $currency, openingBalanceCents: $openingBalanceCents, archived: $archived, parentId: $parentId, icon: $icon, goalCents: $goalCents, createdAt: $createdAt)';
 }
 
 
@@ -273,7 +281,7 @@ abstract mixin class _$AccountCopyWith<$Res> implements $AccountCopyWith<$Res> {
   factory _$AccountCopyWith(_Account value, $Res Function(_Account) _then) = __$AccountCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String userId, String name, AccountType type, String currency, int openingBalanceCents, bool archived, String? parentId, DateTime? createdAt
+ String id, String userId, String name, AccountType type, String currency, int openingBalanceCents, bool archived, String? parentId, String? icon, int? goalCents, DateTime? createdAt
 });
 
 
@@ -290,7 +298,7 @@ class __$AccountCopyWithImpl<$Res>
 
 /// Create a copy of Account
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? userId = null,Object? name = null,Object? type = null,Object? currency = null,Object? openingBalanceCents = null,Object? archived = null,Object? parentId = freezed,Object? createdAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? userId = null,Object? name = null,Object? type = null,Object? currency = null,Object? openingBalanceCents = null,Object? archived = null,Object? parentId = freezed,Object? icon = freezed,Object? goalCents = freezed,Object? createdAt = freezed,}) {
   return _then(_Account(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
@@ -300,7 +308,9 @@ as AccountType,currency: null == currency ? _self.currency : currency // ignore:
 as String,openingBalanceCents: null == openingBalanceCents ? _self.openingBalanceCents : openingBalanceCents // ignore: cast_nullable_to_non_nullable
 as int,archived: null == archived ? _self.archived : archived // ignore: cast_nullable_to_non_nullable
 as bool,parentId: freezed == parentId ? _self.parentId : parentId // ignore: cast_nullable_to_non_nullable
-as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,icon: freezed == icon ? _self.icon : icon // ignore: cast_nullable_to_non_nullable
+as String?,goalCents: freezed == goalCents ? _self.goalCents : goalCents // ignore: cast_nullable_to_non_nullable
+as int?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,
   ));
 }

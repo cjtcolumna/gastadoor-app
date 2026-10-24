@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/utils/friendly_error.dart';
 import '../../../core/utils/money.dart';
@@ -88,17 +89,24 @@ class _AccountsList extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 8),
+        // Main accounts only. Tap one to see its sub-accounts.
         AccountsCard(
           children: [
             for (final group in groupAccounts(accounts))
-              _AccountGroupRows(group: group, balances: balances),
+              AccountBalanceTile(
+                account: group.account,
+                balanceCents: group.totalCents(balances),
+                subtitle: groupSubtitle(group),
+                showChevron: true,
+                onTap: () => context.go('/accounts/${group.account.id}'),
+              ),
           ],
         ),
         Padding(
           padding: const EdgeInsets.all(12),
           child: Text(
-            'Tap an account to rename it, change its starting balance, '
-            'or add a sub-account (like Travel inside GoTyme).',
+            'Tap an account to see its sub-accounts, like Travel '
+            'inside GoTyme.',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
@@ -106,47 +114,6 @@ class _AccountsList extends ConsumerWidget {
           ),
         ),
         const _ArchivedSection(),
-      ],
-    );
-  }
-}
-
-/// A main account and, if it has pockets, its "Main balance" and each
-/// pocket underneath. The big number is the total of all of them.
-class _AccountGroupRows extends StatelessWidget {
-  const _AccountGroupRows({required this.group, required this.balances});
-
-  final AccountGroup group;
-  final Map<String, int> balances;
-
-  @override
-  Widget build(BuildContext context) {
-    final parent = group.account;
-    void edit(Account a) => showAccountFormSheet(context, account: a);
-
-    return Column(
-      children: [
-        AccountBalanceTile(
-          account: parent,
-          balanceCents: group.totalCents(balances),
-          subtitle: groupSubtitle(group),
-          onTap: () => edit(parent),
-        ),
-        if (group.hasChildren) ...[
-          PocketTile(
-            name: 'Main balance',
-            isMain: true,
-            balanceCents: balanceOf(parent, balances),
-            onTap: () => edit(parent),
-          ),
-          for (final pocket in group.children)
-            PocketTile(
-              name: pocket.name,
-              balanceCents: balanceOf(pocket, balances),
-              onTap: () => edit(pocket),
-            ),
-          const SizedBox(height: 8),
-        ],
       ],
     );
   }

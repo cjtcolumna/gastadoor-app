@@ -45,12 +45,16 @@ class AccountsRepository {
     required AccountType type,
     int openingBalanceCents = 0,
     String? parentId,
+    String? icon,
+    int? goalCents,
   }) async {
     await _client.from('accounts').insert({
       'name': name.trim(),
       'type': type.dbValue,
       'opening_balance_cents': openingBalanceCents,
       'parent_id': parentId,
+      'icon': icon,
+      'goal_cents': goalCents,
     });
   }
 
@@ -62,6 +66,8 @@ class AccountsRepository {
           'type': account.type.dbValue,
           'opening_balance_cents': account.openingBalanceCents,
           'parent_id': account.parentId,
+          'icon': account.icon,
+          'goal_cents': account.goalCents,
         })
         .eq('id', account.id);
     // Pockets always match their parent's type (GoTyme is a bank, so

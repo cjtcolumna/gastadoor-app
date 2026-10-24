@@ -29,6 +29,7 @@ class AccountBalanceTile extends StatelessWidget {
     required this.account,
     required this.balanceCents,
     this.subtitle,
+    this.showChevron = false,
     this.onTap,
   });
 
@@ -37,6 +38,9 @@ class AccountBalanceTile extends StatelessWidget {
 
   /// The line under the name. Defaults to the account type, e.g. "Bank".
   final String? subtitle;
+
+  /// Show a › at the end, meaning "tap to open its page".
+  final bool showChevron;
   final VoidCallback? onTap;
 
   @override
@@ -55,6 +59,10 @@ class AccountBalanceTile extends StatelessWidget {
     );
     final details = Text(subtitle ?? account.type.label);
     final large = isLargeText(context);
+    final chevron = Icon(
+      Icons.chevron_right_rounded,
+      color: theme.colorScheme.onSurfaceVariant,
+    );
 
     return ListTile(
       leading: CircleAvatar(
@@ -72,69 +80,15 @@ class AccountBalanceTile extends StatelessWidget {
               children: [details, amount],
             )
           : details,
-      trailing: large ? null : amount,
-      onTap: onTap,
-    );
-  }
-}
-
-/// A smaller, indented row under a main account: its own "Main balance",
-/// or one of its pockets (Travel, Emergency Fund...).
-class PocketTile extends StatelessWidget {
-  const PocketTile({
-    super.key,
-    required this.name,
-    required this.balanceCents,
-    this.isMain = false,
-    this.onTap,
-  });
-
-  final String name;
-  final int balanceCents;
-
-  /// True for the parent's own money ("Main balance").
-  final bool isMain;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final money = context.appColors;
-    final muted = theme.colorScheme.onSurfaceVariant;
-    final large = isLargeText(context);
-    final amount = Text(
-      Money.format(balanceCents),
-      style: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: balanceCents < 0 ? money.expense : muted,
-        fontFeatures: const [FontFeature.tabularFigures()],
-      ),
-    );
-
-    return ListTile(
-      dense: true,
-      // Lines up with the main account's name, so it reads as "inside".
-      // With very big text, indent less to leave room for the words.
-      contentPadding: EdgeInsetsDirectional.only(
-        start: large ? 40 : 72,
-        end: 16,
-      ),
-      minLeadingWidth: 0,
-      horizontalTitleGap: 8,
-      leading: Icon(
-        isMain ? Icons.account_balance_wallet_rounded : Icons.savings_rounded,
-        size: 18,
-        color: muted,
-      ),
-      title: Text(
-        name,
-        style: theme.textTheme.bodyMedium?.copyWith(
-          color: isMain ? muted : null,
+      trailing: switch ((large, showChevron)) {
+        (true, true) => chevron,
+        (true, false) => null,
+        (false, true) => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [amount, const SizedBox(width: 4), chevron],
         ),
-      ),
-      subtitle: large ? amount : null,
-      trailing: large ? null : amount,
+        (false, false) => amount,
+      },
       onTap: onTap,
     );
   }
