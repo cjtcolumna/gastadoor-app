@@ -8,7 +8,9 @@ import '../../../core/utils/money.dart';
 import '../../../core/widgets/money_text_field.dart';
 import '../../accounts/data/accounts_provider.dart';
 import '../../accounts/domain/account.dart';
+import '../../accounts/domain/account_groups.dart';
 import '../../accounts/presentation/account_type_ui.dart';
+import '../../accounts/presentation/account_avatar.dart';
 import '../../categories/data/categories_repository.dart';
 import '../../categories/domain/category.dart';
 import '../../categories/presentation/category_form_sheet.dart';
@@ -17,11 +19,16 @@ import '../data/transaction_actions.dart';
 import '../domain/transaction.dart';
 import '../domain/transaction_draft.dart';
 
-/// Opens the add/edit form for an expense or income.
+/// Opens the add/edit form for an expense, income, or transfer.
 /// Pass [existing] to edit it, or leave it null to add a new one.
+/// For a new one, [kind], [accountId] and [toAccountId] pre-fill the form
+/// (used by "Add money" on a sub-account: a transfer GoTyme -> Travel).
 Future<void> showTransactionFormSheet(
   BuildContext context, {
   Transaction? existing,
+  TransactionKind? kind,
+  String? accountId,
+  String? toAccountId,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -29,14 +36,30 @@ Future<void> showTransactionFormSheet(
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,
-    builder: (_) => TransactionFormSheet(existing: existing),
+    builder: (_) => TransactionFormSheet(
+      existing: existing,
+      initialKind: kind,
+      initialAccountId: accountId,
+      initialToAccountId: toAccountId,
+    ),
   );
 }
 
 class TransactionFormSheet extends ConsumerStatefulWidget {
-  const TransactionFormSheet({super.key, this.existing});
+  const TransactionFormSheet({
+    super.key,
+    this.existing,
+    this.initialKind,
+    this.initialAccountId,
+    this.initialToAccountId,
+  });
 
   final Transaction? existing;
+
+  /// Starting choices for a new transaction (ignored when editing).
+  final TransactionKind? initialKind;
+  final String? initialAccountId;
+  final String? initialToAccountId;
 
   @override
   ConsumerState<TransactionFormSheet> createState() =>
@@ -53,10 +76,13 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
   late final _noteController = TextEditingController(
     text: widget.existing?.note,
   );
-  late TransactionKind _kind = widget.existing?.kind ?? TransactionKind.expense;
+  late TransactionKind _kind =
+      widget.existing?.kind ?? widget.initialKind ?? TransactionKind.expense;
   late String? _categoryId = widget.existing?.categoryId;
-  late String? _accountId = widget.existing?.accountId;
-  late String? _toAccountId = widget.existing?.toAccountId;
+  late String? _accountId =
+      widget.existing?.accountId ?? widget.initialAccountId;
+  late String? _toAccountId =
+      widget.existing?.toAccountId ?? widget.initialToAccountId;
   late DateTime _date = dateOnly(widget.existing?.occurredOn ?? DateTime.now());
   bool _saving = false;
   String? _error;
@@ -180,7 +206,10 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final keyboard = MediaQuery.viewInsetsOf(context).bottom;
-    final accounts = ref.watch(accountsProvider).value ?? const <Account>[];
+    // Each main account followed by its pockets (GoTyme, Travel, ...).
+    final accounts = inGroupOrder(
+      ref.watch(accountsProvider).value ?? const <Account>[],
+    );
     final categories = (ref.watch(categoriesProvider).value ?? const [])
         .where((c) => c.kind == _kind)
         .toList();
@@ -230,6 +259,7 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
               _AccountPicker(
                 // You can't transfer into the same account.
                 accounts: accounts.where((a) => a.id != accountId).toList(),
+                allAccounts: accounts,
                 selectedId: toAccountId,
                 emptyText: 'Add a second account to make transfers.',
                 onChanged: _saving
@@ -443,10 +473,15 @@ class _AccountPicker extends StatelessWidget {
     required this.selectedId,
     required this.onChanged,
     this.archivedAccount,
+    this.allAccounts,
     this.emptyText = 'No accounts yet. Add one in the Accounts tab.',
   });
 
   final List<Account> accounts;
+
+  /// Every account, used to name pockets "GoTyme › Travel" even when the
+  /// parent isn't one of the choices. Defaults to [accounts].
+  final List<Account>? allAccounts;
   final String? selectedId;
   final ValueChanged<String>? onChanged;
 
@@ -476,8 +511,8 @@ class _AccountPicker extends StatelessWidget {
           ),
         for (final account in accounts)
           ChoiceChip(
-            avatar: Icon(account.type.icon, size: 18),
-            label: Text(account.name),
+            avatar: AccountAvatar(account: account, size: 20),
+            label: Text(accountLabel(account, allAccounts ?? accounts)),
             selected: account.id == selectedId,
             onSelected: onChanged == null
                 ? null

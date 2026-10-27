@@ -12,11 +12,14 @@ void main() {
 
       expect(find.text('GastaDoor'), findsOneWidget);
       expect(find.text('Net worth'), findsOneWidget);
-      // Net worth, income this month, and spent this month are all zero.
-      expect(find.text('₱0.00'), findsNWidgets(3));
+      // Net worth, income and spent this month, and the spending
+      // chart's total are all zero.
+      expect(find.text('₱0.00'), findsNWidgets(4));
       expect(find.textContaining('Income ·'), findsOneWidget);
       expect(find.textContaining('Spent ·'), findsOneWidget);
-      // No budgets yet, so Home invites you to add one.
+      // No budgets yet, so Home invites you to add one. It sits below
+      // the spending chart, so scroll down to it.
+      await tester.scrollUntilVisible(find.text('Add a budget'), 300);
       expect(find.text('Add a budget'), findsOneWidget);
       // The setup note is at the bottom, so scroll down to it.
       await tester.scrollUntilVisible(
@@ -76,5 +79,17 @@ void main() {
     await tester.tap(find.bySemanticsLabel('Home'));
     await tester.pumpAndSettle();
     expect(find.text('Net worth'), findsOneWidget);
+  });
+
+  testWidgets('spending comes before budgets on Home', (tester) async {
+    tester.view.physicalSize = const Size(390, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(const ProviderScope(child: GastaDoorApp()));
+    await tester.pumpAndSettle();
+
+    final spending = tester.getTopLeft(find.text('Where your money went'));
+    final budgets = tester.getTopLeft(find.text('Add a budget'));
+    expect(spending.dy, lessThan(budgets.dy));
   });
 }

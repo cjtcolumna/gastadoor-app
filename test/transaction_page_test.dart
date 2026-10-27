@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gastadoor/features/accounts/domain/account.dart';
 import 'package:gastadoor/features/transactions/domain/transaction_page.dart';
 
 /// A page with [count] fake items (the items' contents don't matter here).
@@ -55,5 +56,43 @@ void main() {
     expect(item.accountName, 'Cash');
     expect(item.categoryName, isNull);
     expect(item.transaction.amountCents, 100);
+  });
+
+  test('History names pockets "GoTyme › Travel"', () {
+    TransactionListItem item(String from, String? to) =>
+        TransactionListItem.fromRow({
+          'id': 'x',
+          'user_id': 'u',
+          'account_id': from,
+          'to_account_id': to,
+          'kind': to == null ? 'expense' : 'transfer',
+          'amount_cents': 100,
+          'occurred_on': '2026-10-24',
+          'account': {'name': 'db name'},
+          'to_account': to == null ? null : {'name': 'db to name'},
+          'categories': null,
+        });
+    const all = [
+      Account(id: 'g', userId: 'u', name: 'GoTyme', type: AccountType.bank),
+      Account(
+        id: 't',
+        userId: 'u',
+        name: 'Travel',
+        type: AccountType.bank,
+        parentId: 'g',
+      ),
+    ];
+
+    final labelled = labelAccounts([
+      item('t', null),
+      item('g', 't'),
+      item('unknown', null),
+    ], all);
+
+    expect(labelled[0].accountName, 'GoTyme › Travel');
+    expect(labelled[1].accountName, 'GoTyme');
+    expect(labelled[1].toAccountName, 'GoTyme › Travel');
+    // Not in the list: keeps the name from the database.
+    expect(labelled[2].accountName, 'db name');
   });
 }

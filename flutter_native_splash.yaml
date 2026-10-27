@@ -1,11 +1,9 @@
-# Splash screen (shown while the app starts). Regenerate with:
+# Splash screen (shown while the app starts): plain green, no logo.
+# Regenerate with:
 #   dart run flutter_native_splash:create
 flutter_native_splash:
   color: "#2E7D5B"
-  image: assets/splash/splash_logo.png
-  # Android 12+ draws the splash icon inside a circle.
   android_12:
-    image: assets/splash/splash_logo_android12.png
     color: "#2E7D5B"
   android: true
   ios: true

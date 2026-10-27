@@ -4,7 +4,8 @@ import 'package:intl/intl.dart';
 
 import '../../accounts/data/accounts_provider.dart';
 import '../../accounts/domain/account.dart';
-import '../../accounts/presentation/account_type_ui.dart';
+import '../../accounts/domain/account_groups.dart';
+import '../../accounts/presentation/account_avatar.dart';
 import '../../categories/data/categories_repository.dart';
 import '../../categories/presentation/category_visuals.dart';
 import '../data/transactions_repository.dart';
@@ -31,9 +32,10 @@ class HistoryFilterBar extends ConsumerWidget {
     // Say the type (<Account>) explicitly: without it, Dart treats this list
     // as "anything" (dynamic), and `account.type.icon` (an extension) then
     // crashes when the Account chip is tapped.
+    // Each main account followed by its pockets; archived ones last.
     final accounts = <Account>[
-      ...?ref.watch(accountsProvider).value,
-      ...?ref.watch(archivedAccountsProvider).value,
+      ...inGroupOrder(ref.watch(accountsProvider).value ?? const []),
+      ...inGroupOrder(ref.watch(archivedAccountsProvider).value ?? const []),
     ];
     final categories = ref.watch(categoriesProvider).value ?? const [];
     final account = accounts.where((a) => a.id == filter.accountId).firstOrNull;
@@ -93,7 +95,9 @@ class HistoryFilterBar extends ConsumerWidget {
                 onTap: () => _pickKind(context),
               ),
               _FilterChip(
-                label: account?.name ?? 'Account',
+                label: account == null
+                    ? 'Account'
+                    : accountLabel(account, accounts),
                 icon: Icons.account_balance_wallet_rounded,
                 active: filter.accountId != null,
                 onTap: () => _pick<String>(
@@ -104,8 +108,10 @@ class HistoryFilterBar extends ConsumerWidget {
                     for (final a in accounts)
                       _Option(
                         a.id,
-                        a.archived ? '${a.name} (archived)' : a.name,
-                        Icon(a.type.icon),
+                        a.archived
+                            ? '${accountLabel(a, accounts)} (archived)'
+                            : accountLabel(a, accounts),
+                        AccountAvatar(account: a, size: 28),
                       ),
                   ],
                   onPicked: (id) =>

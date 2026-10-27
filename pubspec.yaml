@@ -31,6 +31,11 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+  # Bank and e-wallet icons (each bank's own App Store icon, 192 px),
+  # shown automatically when an account's name matches. Personal use only.
+  assets:
+    - assets/banks/
+
   # Plus Jakarta Sans: the app's font (Google Fonts, SIL Open Font License,
   # see assets/fonts/PlusJakartaSans-OFL.txt). One file per weight.
   fonts:

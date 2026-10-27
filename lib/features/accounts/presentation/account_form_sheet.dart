@@ -7,10 +7,13 @@ import '../../../core/widgets/money_text_field.dart';
 import '../data/accounts_provider.dart';
 import '../domain/account.dart';
 import '../domain/balances.dart';
+import '../domain/ph_banks.dart';
+import 'account_avatar.dart';
 import 'account_type_ui.dart';
 
-/// Opens the add/edit form as a panel that slides up from the bottom.
-/// Pass [account] to edit it, or leave it null to add a new one.
+/// Opens the add/edit form for a main account (Cash, GoTyme, BDO...) as a
+/// panel that slides up from the bottom. Pass [account] to edit it, or
+/// leave it null to add a new one. Sub-accounts use `PocketFormSheet`.
 Future<void> showAccountFormSheet(BuildContext context, {Account? account}) {
   return showModalBottomSheet<void>(
     context: context,
@@ -25,19 +28,25 @@ Future<void> showAccountFormSheet(BuildContext context, {Account? account}) {
 
 /// The text in the "Archive this account?" dialog.
 /// Adds a warning when the balance isn't zero, because archived accounts
-/// don't count toward net worth.
-String archiveMessage(String name, int balanceCents) {
-  const base =
+/// don't count toward net worth. [pockets] is how many sub-accounts get
+/// archived along with it.
+String archiveMessage(String name, int balanceCents, {int pockets = 0}) {
+  final base =
       'It will be hidden from your accounts and from the + form. '
       'Its past transactions stay in History, and you can restore it '
       'any time from the Archived section.';
-  if (balanceCents == 0) return base;
+  final withPockets = switch (pockets) {
+    0 => base,
+    1 => 'Its sub-account will be archived too. $base',
+    _ => 'Its $pockets sub-accounts will be archived too. $base',
+  };
+  if (balanceCents == 0) return withPockets;
   final amount = Money.format(balanceCents.abs());
   final warning = balanceCents > 0
       ? '$name still has $amount. '
       : '$name still owes $amount. ';
   return '$warning'
-      'It will no longer count in your net worth.\n\n$base';
+      'It will no longer count in your net worth.\n\n$withPockets';
 }
 
 class AccountFormSheet extends ConsumerStatefulWidget {
@@ -60,6 +69,10 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
         : Money.toInputText(widget.account!.openingBalanceCents),
   );
   late AccountType _type = widget.account?.type ?? AccountType.cash;
+
+  /// True once the person taps a type chip themselves. Until then, a new
+  /// account's type follows the bank in its name (GCash -> E-wallet).
+  bool _typePicked = false;
   bool _saving = false;
   String? _error;
 
@@ -111,17 +124,33 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
     });
   }
 
+  /// For a new account, picks the type that fits the bank in the name
+  /// (unless the person already picked one).
+  void _guessType(String name) {
+    if (_isEditing || _typePicked) return;
+    final bank = bankForName(name);
+    if (bank == null) return;
+    setState(
+      () => _type = bank.isWallet ? AccountType.eWallet : AccountType.bank,
+    );
+  }
+
   /// Asks first, and warns if the account still has money in it (or owes).
   Future<void> _archive() async {
     final account = widget.account!;
+    final active = ref.read(accountsProvider).value ?? const <Account>[];
     final balances = ref.read(accountBalancesProvider).value ?? const {};
-    final balance = balanceOf(account, balances);
+    final pockets = active.where((a) => a.parentId == account.id).toList();
+    // The warning uses the total, since its sub-accounts are archived too.
+    final balance = netWorthCents([account, ...pockets], balances);
 
     final sure = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Archive ${account.name}?'),
-        content: Text(archiveMessage(account.name, balance)),
+        content: Text(
+          archiveMessage(account.name, balance, pockets: pockets.length),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -170,11 +199,27 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
               maxLength: 80,
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
+              onChanged: _guessType,
+            ),
+            // "Looks like GoTyme Bank" with its icon, while typing.
+            ValueListenableBuilder(
+              valueListenable: _nameController,
+              builder: (context, value, _) {
+                final bank = bankForName(value.text);
+                return bank == null
+                    ? const SizedBox.shrink()
+                    : _BankPreview(bank: bank);
+              },
             ),
             const SizedBox(height: 8),
             _TypePicker(
               selected: _type,
-              onChanged: _saving ? null : (t) => setState(() => _type = t),
+              onChanged: _saving
+                  ? null
+                  : (t) => setState(() {
+                      _type = t;
+                      _typePicked = true;
+                    }),
             ),
             const SizedBox(height: 20),
             MoneyTextField(
@@ -213,6 +258,35 @@ class _AccountFormSheetState extends ConsumerState<AccountFormSheet> {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Shown under the name when it matches a known bank.
+class _BankPreview extends StatelessWidget {
+  const _BankPreview({required this.bank});
+
+  final PhBank bank;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          BankIcon(bank: bank, size: 28),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Looks like ${bank.name}. Its icon and color will be used.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

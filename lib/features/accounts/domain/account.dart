@@ -23,6 +23,15 @@ abstract class Account with _$Account {
     @Default('PHP') String currency,
     @Default(0) int openingBalanceCents,
     @Default(false) bool archived,
+
+    /// Set for a sub-account: the id of the account it sits inside.
+    String? parentId,
+
+    /// Sub-accounts only: the icon name, e.g. 'flight'. Null = piggy bank.
+    String? icon,
+
+    /// Sub-accounts only: the savings goal in cents. Null = no goal.
+    int? goalCents,
     DateTime? createdAt,
   }) = _Account;
 

@@ -258,10 +258,13 @@ void main() {
       find.byType(SegmentedButton<TransactionKind>),
     );
     expect(kindSwitch.showSelectedIcon, isFalse);
-    // The Income arrow, Salary icon, and GCash icon are all still shown.
+    // The Income arrow, Salary icon, and GCash's own icon are all shown.
     expect(find.byIcon(Icons.south_west_rounded), findsOneWidget);
     expect(find.byIcon(Icons.work_rounded), findsOneWidget);
-    expect(find.byIcon(Icons.phone_iphone_rounded), findsOneWidget);
+    expect(
+      find.image(const AssetImage('assets/banks/gcash.png')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a transfer moves money from one account to another', (
@@ -351,5 +354,36 @@ void main() {
     await tapVisible(tester, find.text('Income'));
     await tapVisible(tester, find.byTooltip('New category'));
     expect(find.text('New income category'), findsOneWidget);
+  });
+
+  testWidgets('an expense can come from a sub-account (pocket)', (
+    tester,
+  ) async {
+    const gotyme = Account(
+      id: 'g',
+      userId: 'u',
+      name: 'GoTyme',
+      type: AccountType.bank,
+    );
+    const travel = Account(
+      id: 't',
+      userId: 'u',
+      name: 'Travel',
+      type: AccountType.bank,
+      parentId: 'g',
+    );
+    // Travel was made after Cash, but is listed right after GoTyme.
+    await openSheet(tester, accounts: [gotyme, cashAccount, travel]);
+
+    final labels = tester
+        .widgetList<ChoiceChip>(find.byType(ChoiceChip))
+        .map((chip) => (chip.label as Text).data)
+        .where((l) => ['GoTyme', 'GoTyme › Travel', 'Cash'].contains(l));
+    expect(labels, ['GoTyme', 'GoTyme › Travel', 'Cash']);
+
+    await tester.enterText(amountField(), '2500');
+    await tapVisible(tester, find.text('GoTyme › Travel'));
+    await tapVisible(tester, save());
+    expect(actions.added.single.accountId, 't');
   });
 }

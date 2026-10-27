@@ -1,3 +1,5 @@
+import '../../accounts/domain/account.dart';
+import '../../accounts/domain/account_groups.dart';
 import 'transaction.dart';
 
 /// A transaction plus the names of its account and category,
@@ -39,6 +41,38 @@ class TransactionListItem {
       categoryColor: category?['color'] as String?,
     );
   }
+
+  /// A copy with different account names (everything else the same).
+  TransactionListItem withAccountNames(String accountName, String? toName) =>
+      TransactionListItem(
+        transaction: transaction,
+        accountName: accountName,
+        toAccountName: toName,
+        categoryName: categoryName,
+        categoryIcon: categoryIcon,
+        categoryColor: categoryColor,
+      );
+}
+
+/// Renames pockets in [items] to "GoTyme › Travel", using [all] accounts
+/// (active and archived). Accounts it doesn't know keep their name.
+List<TransactionListItem> labelAccounts(
+  List<TransactionListItem> items,
+  List<Account> all,
+) {
+  final byId = {for (final a in all) a.id: a};
+  String? label(String? id, String? fallback) {
+    final account = byId[id];
+    return account == null ? fallback : accountLabel(account, all);
+  }
+
+  return [
+    for (final item in items)
+      item.withAccountNames(
+        label(item.transaction.accountId, item.accountName)!,
+        label(item.transaction.toAccountId, item.toAccountName),
+      ),
+  ];
 }
 
 /// A day's total: income minus expenses. Transfers don't change it,

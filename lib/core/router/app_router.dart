@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/accounts/presentation/account_detail_screen.dart';
 import '../../features/accounts/presentation/accounts_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/budgets/presentation/budgets_screen.dart';
@@ -91,6 +92,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: '/accounts',
                 name: 'accounts',
                 builder: (context, state) => const AccountsScreen(),
+                routes: [
+                  // One account's page, e.g. /accounts/1234 for GoTyme.
+                  // The `:id` part is read from the address.
+                  GoRoute(
+                    path: ':id',
+                    name: 'account',
+                    builder: (context, state) => AccountDetailScreen(
+                      accountId: state.pathParameters['id']!,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

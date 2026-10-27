@@ -10,6 +10,7 @@ import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/screen_padding.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../accounts/data/accounts_provider.dart';
+import '../../accounts/domain/account_groups.dart';
 import '../../accounts/domain/balances.dart';
 import '../../accounts/presentation/account_balance_tile.dart';
 import '../../budgets/data/budgets_provider.dart';
@@ -60,9 +61,10 @@ class HomeScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             const _MonthSummary(),
             const SizedBox(height: 28),
-            const _BudgetsSection(),
-            const SizedBox(height: 28),
+            // Where the money went comes first, then how budgets are doing.
             const _SpendingSection(),
+            const SizedBox(height: 28),
+            const _BudgetsSection(),
             const SizedBox(height: 28),
             const _AccountsSection(),
             if (!supabaseReady) ...[
@@ -332,6 +334,7 @@ class _SpendingSection extends ConsumerWidget {
             slices: spendingByCategory(month),
             categoriesById: byId,
             maxRows: 3,
+            chartSize: 180, // a bit smaller than on the Insights page
           ),
       ],
     );
@@ -373,13 +376,15 @@ class _AccountsSection extends ConsumerWidget {
                 )
               : AccountsCard(
                   children: [
-                    for (final account in list)
+                    // One row per main account, showing its total
+                    // (its own money plus its sub-accounts).
+                    for (final group in groupAccounts(list))
                       AccountBalanceTile(
-                        account: account,
-                        balanceCents: balanceOf(
-                          account,
+                        account: group.account,
+                        balanceCents: group.totalCents(
                           balances.value ?? const {},
                         ),
+                        subtitle: groupSubtitle(group),
                       ),
                   ],
                 ),

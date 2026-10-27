@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/utils/friendly_error.dart';
 import '../../../core/utils/money.dart';
@@ -8,7 +9,9 @@ import '../../../core/widgets/screen_padding.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../data/accounts_provider.dart';
 import '../domain/account.dart';
+import '../domain/account_groups.dart';
 import '../domain/balances.dart';
+import 'account_avatar.dart';
 import 'account_balance_tile.dart';
 import 'account_form_sheet.dart';
 import 'account_type_ui.dart';
@@ -87,20 +90,24 @@ class _AccountsList extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 8),
+        // Main accounts only. Tap one to see its sub-accounts.
         AccountsCard(
           children: [
-            for (final account in accounts)
+            for (final group in groupAccounts(accounts))
               AccountBalanceTile(
-                account: account,
-                balanceCents: balanceOf(account, balances),
-                onTap: () => showAccountFormSheet(context, account: account),
+                account: group.account,
+                balanceCents: group.totalCents(balances),
+                subtitle: groupSubtitle(group),
+                showChevron: true,
+                onTap: () => context.go('/accounts/${group.account.id}'),
               ),
           ],
         ),
         Padding(
           padding: const EdgeInsets.all(12),
           child: Text(
-            'Tap an account to rename it or change its starting balance.',
+            'Tap an account to see its sub-accounts, like Travel '
+            'inside GoTyme.',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
@@ -152,10 +159,15 @@ class _ArchivedSectionState extends ConsumerState<_ArchivedSection> {
           shape: const Border(),
           collapsedShape: const Border(),
           children: [
-            for (final account in archived) ...[
+            for (final account in inGroupOrder(archived)) ...[
               const Divider(height: 1),
               _ArchivedTile(
                 account: account,
+                // "GoTyme › Travel" for an archived pocket.
+                label: accountLabel(account, [
+                  ...archived,
+                  ...?ref.watch(accountsProvider).value,
+                ]),
                 balanceCents: balanceOf(account, balances),
               ),
             ],
@@ -167,9 +179,14 @@ class _ArchivedSectionState extends ConsumerState<_ArchivedSection> {
 }
 
 class _ArchivedTile extends ConsumerStatefulWidget {
-  const _ArchivedTile({required this.account, required this.balanceCents});
+  const _ArchivedTile({
+    required this.account,
+    required this.label,
+    required this.balanceCents,
+  });
 
   final Account account;
+  final String label;
   final int balanceCents;
 
   @override
@@ -183,7 +200,7 @@ class _ArchivedTileState extends ConsumerState<_ArchivedTile> {
     setState(() => _restoring = true);
     Object? failure;
     try {
-      await ref.read(accountsProvider.notifier).restore(widget.account.id);
+      await ref.read(accountsProvider.notifier).restore(widget.account);
     } catch (e) {
       failure = e;
     }
@@ -201,12 +218,15 @@ class _ArchivedTileState extends ConsumerState<_ArchivedTile> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: theme.colorScheme.surfaceContainerHighest,
-        foregroundColor: theme.colorScheme.onSurfaceVariant,
-        child: Icon(widget.account.type.icon, size: 22),
-      ),
-      title: Text(widget.account.name),
+      leading: bankOf(widget.account) != null
+          // Faded, to show it's archived.
+          ? Opacity(opacity: 0.5, child: AccountAvatar(account: widget.account))
+          : CircleAvatar(
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+              foregroundColor: theme.colorScheme.onSurfaceVariant,
+              child: Icon(widget.account.type.icon, size: 22),
+            ),
+      title: Text(widget.label),
       subtitle: Text(Money.format(widget.balanceCents)),
       trailing: _restoring
           ? const SizedBox.square(
