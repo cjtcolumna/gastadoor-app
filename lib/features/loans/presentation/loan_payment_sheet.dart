@@ -197,20 +197,26 @@ class _LoanPaymentSheetState extends ConsumerState<LoanPaymentSheet> {
                       onAccountPicked: (id) => setState(() => _accountId = id),
                     ),
                   ),
-                  const LoanSectionLabel('Details'),
-                  LoanGroup(
-                    children: [
-                      LoanDateRow(
-                        label: 'Date paid',
-                        date: _paidOn,
-                        onTap: _saving ? null : _pickDate,
-                      ),
-                      LoanNoteRow(
-                        key: const Key('loan-note'),
-                        controller: _noteController,
-                        enabled: !_saving,
-                      ),
-                    ],
+                  const LoanSectionLabel('Date paid'),
+                  LoanDateButton(
+                    key: const Key('date-paid'),
+                    date: _paidOn,
+                    onTap: _saving ? null : _pickDate,
+                  ),
+                  const LoanSectionLabel('Notes'),
+                  TextFormField(
+                    key: const Key('loan-note'),
+                    controller: _noteController,
+                    enabled: !_saving,
+                    decoration: const InputDecoration(
+                      hintText: 'Anything to remember about this payment?',
+                      // Hide the "0/500" counter; the limit still applies.
+                      counterText: '',
+                    ),
+                    maxLength: 500,
+                    minLines: 1,
+                    maxLines: 3,
+                    textCapitalization: TextCapitalization.sentences,
                   ),
                 ],
               ),

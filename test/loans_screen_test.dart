@@ -120,12 +120,6 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  /// Opens the account pills (they stay hidden behind one row until then).
-  Future<void> openAccountRow(WidgetTester tester) async {
-    await tester.tap(find.byKey(const Key('account-row')));
-    await tester.pumpAndSettle();
-  }
-
   /// The form's big button. (The last one is the one on top.)
   Finder saveButton() => find.byType(FilledButton).last;
 
@@ -175,24 +169,16 @@ void main() {
       expect(fake.lent, [('Mark', 1000000, 'gotyme')]);
     });
 
-    testWidgets('the account is one row; its pills open when you tap it', (
+    testWidgets('the account pills are shown, the first one picked', (
       tester,
     ) async {
       await pump(tester, const LoansScreen());
       await openLendForm(tester);
 
-      // Closed: just the row, showing the account that will be used.
-      expect(find.widgetWithText(ChoiceChip, 'Cash'), findsNothing);
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('account-row')),
-          matching: find.text('GoTyme'),
-        ),
-        findsOneWidget,
-      );
-
-      await openAccountRow(tester);
-      expect(find.widgetWithText(ChoiceChip, 'Cash'), findsOneWidget);
+      final gotyme = find.widgetWithText(ChoiceChip, 'GoTyme');
+      final cash = find.widgetWithText(ChoiceChip, 'Cash');
+      expect(tester.widget<ChoiceChip>(gotyme).selected, isTrue);
+      expect(tester.widget<ChoiceChip>(cash).selected, isFalse);
     });
 
     testWidgets('you can pick a different account', (tester) async {
@@ -201,18 +187,14 @@ void main() {
 
       await tester.enterText(personField, 'Mark');
       await tester.enterText(amountField, '500');
-      await openAccountRow(tester);
       await tester.tap(find.widgetWithText(ChoiceChip, 'Cash'));
       await tester.pumpAndSettle();
 
-      // Picking closes the pills and the row shows the new account.
-      expect(find.widgetWithText(ChoiceChip, 'Cash'), findsNothing);
       expect(
-        find.descendant(
-          of: find.byKey(const Key('account-row')),
-          matching: find.text('Cash'),
-        ),
-        findsOneWidget,
+        tester
+            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Cash'))
+            .selected,
+        isTrue,
       );
       await tapSave(tester);
 
@@ -230,8 +212,8 @@ void main() {
       await tester.tap(find.byType(CupertinoSwitch));
       await tester.pumpAndSettle();
 
-      // The account row is hidden, and the reason is shown.
-      expect(find.byKey(const Key('account-row')), findsNothing);
+      // The account pills are hidden, and the reason is shown.
+      expect(find.widgetWithText(ChoiceChip, 'GoTyme'), findsNothing);
       expect(
         find.textContaining('before you started tracking'),
         findsOneWidget,
@@ -315,19 +297,26 @@ void main() {
     ) async {
       await pump(tester, const LoansScreen());
       await openLendForm(tester);
-      expect(find.text('None'), findsOneWidget);
+      expect(find.text('No due date'), findsOneWidget);
 
       final today = DateTime.now();
       final inAWeek = DateTime(today.year, today.month, today.day + 7);
 
       await tester.tap(find.widgetWithText(ChoiceChip, '1 week'));
       await tester.pumpAndSettle();
-      expect(find.text(friendlyDate(inAWeek)), findsOneWidget);
-      expect(find.text('None'), findsNothing);
+      expect(find.text(fullDate(inAWeek)), findsOneWidget);
+      expect(find.text('No due date'), findsNothing);
+
+      // The X next to the date clears it too.
+      await tester.tap(find.byTooltip('Clear due date'));
+      await tester.pumpAndSettle();
+      expect(find.text('No due date'), findsOneWidget);
 
       await tester.tap(find.widgetWithText(ChoiceChip, '1 week'));
       await tester.pumpAndSettle();
-      expect(find.text('None'), findsOneWidget);
+      await tester.tap(find.widgetWithText(ChoiceChip, '1 week'));
+      await tester.pumpAndSettle();
+      expect(find.text('No due date'), findsOneWidget);
     });
 
     testWidgets('fits on a narrow 320px phone, with a due date set', (
@@ -352,7 +341,7 @@ void main() {
       await pump(tester, const LoansScreen());
       await openLendForm(tester);
 
-      await tester.tap(find.text('Date lent'));
+      await tester.tap(find.byKey(const Key('date-lent')));
       await tester.pumpAndSettle();
       expect(find.byType(CupertinoDatePicker), findsOneWidget);
 

@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
@@ -9,7 +8,6 @@ import '../../../core/utils/money.dart';
 import '../../accounts/data/accounts_provider.dart';
 import '../../accounts/domain/account.dart';
 import '../../accounts/domain/account_groups.dart';
-import '../../accounts/presentation/account_avatar.dart';
 import '../../accounts/presentation/account_picker_cards.dart';
 
 /// A small grey heading above a part of the form (same look as the one in
@@ -34,191 +32,50 @@ class LoanSectionLabel extends StatelessWidget {
   }
 }
 
-/// A white rounded card holding rows with thin lines between them, like a
-/// group in the iPhone Settings app.
-class LoanGroup extends StatelessWidget {
-  const LoanGroup({super.key, required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          for (final (i, child) in children.indexed) ...[
-            if (i > 0) const Divider(height: 1, indent: 16),
-            child,
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-/// One row of a [LoanGroup]: the label on the left, then (optionally) a small
-/// [leading] picture and a grey [value], and a [trailing] widget on the right.
-/// With [onTap] the whole row is tappable and shows an arrow by default.
-class LoanRow extends StatelessWidget {
-  const LoanRow({
+/// A date shown on an outlined button with a calendar icon, like the date in
+/// the Add transaction form. With [onClear], an X button empties it (for an
+/// optional date).
+class LoanDateButton extends StatelessWidget {
+  const LoanDateButton({
     super.key,
-    required this.label,
-    this.value,
-    this.leading,
-    this.trailing,
-    this.onTap,
-  });
-
-  final String label;
-  final String? value;
-  final Widget? leading;
-  final Widget? trailing;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final grey = theme.colorScheme.onSurfaceVariant;
-    final end =
-        trailing ??
-        (onTap == null ? null : Icon(Icons.chevron_right_rounded, color: grey));
-
-    final labelText = Text(label, style: theme.textTheme.bodyLarge);
-
-    return InkWell(
-      onTap: onTap,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 52),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          child: Row(
-            children: [
-              if (value == null && leading == null)
-                // Only a label (like a switch row): it may use all the room
-                // that is left, and wrap if it is long.
-                Expanded(child: labelText)
-              else ...[
-                labelText,
-                const SizedBox(width: 12),
-                // The value takes what is left and is cut short with "..."
-                // rather than overflowing.
-                Expanded(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      if (leading != null) ...[
-                        leading!,
-                        const SizedBox(width: 8),
-                      ],
-                      if (value != null)
-                        Flexible(
-                          child: Text(
-                            value!,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              color: grey,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-              if (end != null) ...[const SizedBox(width: 4), end],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// A date row: the label, the date in grey, and an arrow. With [onClear], an
-/// X button empties it (for an optional date).
-class LoanDateRow extends StatelessWidget {
-  const LoanDateRow({
-    super.key,
-    required this.label,
     required this.date,
     required this.onTap,
     this.onClear,
+    this.clearTooltip = 'Clear date',
     this.emptyText = 'Not set',
   });
-
-  final String label;
 
   /// Null shows [emptyText].
   final DateTime? date;
   final VoidCallback? onTap;
   final VoidCallback? onClear;
+  final String clearTooltip;
   final String emptyText;
 
   @override
   Widget build(BuildContext context) {
     final picked = date;
-    return LoanRow(
-      label: label,
-      value: picked == null ? emptyText : friendlyDate(picked),
-      onTap: onTap,
-      trailing: picked != null && onClear != null
-          ? IconButton(
-              tooltip: 'Clear $label',
-              visualDensity: VisualDensity.compact,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              icon: Icon(
-                Icons.cancel_rounded,
-                size: 20,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-              onPressed: onClear,
-            )
-          : null,
-    );
-  }
-}
-
-/// A "Note" row with the text box right in the row: no border, no counter.
-/// The 500-letter limit still applies.
-class LoanNoteRow extends StatelessWidget {
-  const LoanNoteRow({
-    super.key,
-    required this.controller,
-    required this.enabled,
-    this.hint = 'Add a note',
-  });
-
-  final TextEditingController controller;
-  final bool enabled;
-  final String hint;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    return Align(
+      alignment: Alignment.centerLeft,
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            width: 96,
-            child: Text('Note', style: theme.textTheme.bodyLarge),
-          ),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              enabled: enabled,
-              style: theme.textTheme.bodyLarge,
-              textCapitalization: TextCapitalization.sentences,
-              minLines: 1,
-              maxLines: 3,
-              inputFormatters: [LengthLimitingTextInputFormatter(500)],
-              decoration: InputDecoration.collapsed(hintText: hint),
+          Flexible(
+            child: OutlinedButton.icon(
+              onPressed: onTap,
+              icon: const Icon(Icons.calendar_today_rounded, size: 18),
+              label: Text(
+                picked == null ? emptyText : fullDate(picked),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
+          if (picked != null && onClear != null)
+            IconButton(
+              tooltip: clearTooltip,
+              icon: const Icon(Icons.close_rounded),
+              onPressed: onClear,
+            ),
         ],
       ),
     );
@@ -324,7 +181,7 @@ class _DateWheelSheetState extends State<_DateWheelSheet> {
   }
 }
 
-/// The ready-made due dates offered under the form: a label and the day.
+/// The ready-made due dates offered under the due date: a label and the day.
 /// "End of month" is the last day of the month the loan was made in (or of
 /// the next month, if the loan was made on that last day).
 List<(String, DateTime)> dueShortcuts(DateTime lentOn) {
@@ -403,15 +260,16 @@ class RecentBorrowers extends StatelessWidget {
 
 /// "Should this change an account?" for a loan or a repayment.
 ///
-/// - Switch on: pick the account the money leaves (or goes into). It shows
-///   as one row; tap the row to open the account pills, tap a pill to close
-///   them again. Under it, what the balance becomes.
+/// - A heading ([title]) with a switch on its right.
+/// - Switch on: the same account pills as the Add transaction form, to pick
+///   the account the money leaves (or goes into). Under them, what the
+///   balance becomes.
 /// - Switch off: no account changes. This is for money that moved before you
 ///   started tracking, when the starting balance already counted it.
 ///
 /// The screen owns the state ([useAccount], [accountId]); this widget only
-/// shows it and reports taps. Whether the pills are open is its own business.
-class AccountChoice extends ConsumerStatefulWidget {
+/// shows it and reports taps.
+class AccountChoice extends ConsumerWidget {
   const AccountChoice({
     super.key,
     required this.title,
@@ -445,123 +303,75 @@ class AccountChoice extends ConsumerStatefulWidget {
   final bool enabled;
 
   @override
-  ConsumerState<AccountChoice> createState() => _AccountChoiceState();
-}
-
-class _AccountChoiceState extends ConsumerState<AccountChoice> {
-  bool _open = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final w = widget;
+  Widget build(BuildContext context, WidgetRef ref) {
     final accounts = ref.watch(accountsProvider).value ?? const <Account>[];
     final balances = ref.watch(accountBalancesProvider).value;
-    final selected = accounts.where((a) => a.id == w.accountId).firstOrNull;
+    final selected = accounts.where((a) => a.id == accountId).firstOrNull;
     final theme = Theme.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        LoanGroup(
-          children: [
-            LoanRow(
-              label: w.title,
-              onTap: w.enabled
-                  ? () => w.onUseAccountChanged(!w.useAccount)
-                  : null,
-              trailing: CupertinoSwitch(
-                value: w.useAccount,
-                activeTrackColor: theme.colorScheme.primary,
-                onChanged: w.enabled ? w.onUseAccountChanged : null,
-              ),
-            ),
-            if (w.useAccount)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  LoanRow(
-                    key: const Key('account-row'),
-                    label: 'Account',
-                    leading: selected == null
-                        ? null
-                        : AccountAvatar(account: selected, size: 22),
-                    value: selected == null
-                        ? 'Choose'
-                        : accountLabel(selected, accounts),
-                    onTap: w.enabled
-                        ? () => setState(() => _open = !_open)
-                        : null,
-                    trailing: Icon(
-                      _open
-                          ? Icons.expand_less_rounded
-                          : Icons.expand_more_rounded,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  AnimatedSize(
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeOut,
-                    alignment: Alignment.topCenter,
-                    child: _open
-                        ? Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              const Divider(height: 1, indent: 16),
-                              Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: AccountPickerCards(
-                                  accounts: accounts,
-                                  selectedId: w.accountId,
-                                  balances: balances,
-                                  onChanged: w.enabled
-                                      ? (id) {
-                                          setState(() => _open = false);
-                                          w.onAccountPicked(id);
-                                        }
-                                      : null,
-                                ),
-                              ),
-                            ],
-                          )
-                        : const SizedBox(width: double.infinity),
-                  ),
-                ],
-              ),
-          ],
-        ),
+        // The heading, with the switch at the right edge.
         Padding(
-          padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
-          child: _help(context, selected, accounts, balances),
+          padding: const EdgeInsets.only(top: 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              CupertinoSwitch(
+                value: useAccount,
+                activeTrackColor: theme.colorScheme.primary,
+                onChanged: enabled ? onUseAccountChanged : null,
+              ),
+            ],
+          ),
         ),
+        if (useAccount) ...[
+          const SizedBox(height: 8),
+          AccountPickerCards(
+            accounts: accounts,
+            selectedId: accountId,
+            balances: balances,
+            onChanged: enabled ? onAccountPicked : null,
+          ),
+        ],
+        const SizedBox(height: 8),
+        _help(context, selected, accounts, balances),
       ],
     );
   }
 
-  /// The small line under the card: what the switch does, or (with an amount
-  /// and an account) what the balance becomes.
+  /// The small line under the pills: what the switch does, or (with an
+  /// amount and an account) what the balance becomes.
   Widget _help(
     BuildContext context,
     Account? selected,
     List<Account> accounts,
     Map<String, int>? balances,
   ) {
-    final w = widget;
     final theme = Theme.of(context);
     final grey = theme.textTheme.bodySmall?.copyWith(
       color: theme.colorScheme.onSurfaceVariant,
     );
 
-    if (!w.useAccount) return Text(w.offHelp, style: grey);
+    if (!useAccount) return Text(offHelp, style: grey);
 
     final balance = selected == null ? null : balances?[selected.id];
-    final amount = w.amountCents;
+    final amount = amountCents;
     if (selected == null || balance == null || amount == null || amount <= 0) {
-      return Text(w.onHelp, style: grey);
+      return Text(onHelp, style: grey);
     }
 
     final name = accountLabel(selected, accounts);
-    final after = w.moneyLeaves ? balance - amount : balance + amount;
-    if (w.moneyLeaves && after < 0) {
+    final after = moneyLeaves ? balance - amount : balance + amount;
+    if (moneyLeaves && after < 0) {
       return Text(
         "That's more than $name has (${Money.format(balance)}). If you lent "
         'it before you started tracking, turn the switch off.',

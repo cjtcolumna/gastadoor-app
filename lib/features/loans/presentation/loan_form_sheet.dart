@@ -233,54 +233,62 @@ class _LoanFormSheetState extends ConsumerState<LoanFormSheet> {
                       ),
                     ),
                   ],
-                  const LoanSectionLabel('Details'),
-                  LoanGroup(
-                    children: [
-                      if (existing != null)
-                        LoanRow(
-                          label: 'Amount lent',
-                          value: Money.format(existing.amountCents),
-                        )
-                      else
-                        LoanDateRow(
-                          label: 'Date lent',
-                          date: _lentOn,
-                          onTap: _saving ? null : _pickLentOn,
-                        ),
-                      LoanDateRow(
-                        label: 'Due date',
-                        date: _dueOn,
-                        emptyText: 'None',
-                        onTap: _saving ? null : _pickDueOn,
-                        onClear: _saving
-                            ? null
-                            : () => setState(() => _dueOn = null),
-                      ),
-                      LoanNoteRow(
-                        key: const Key('loan-note'),
-                        controller: _noteController,
-                        enabled: !_saving,
-                      ),
-                    ],
-                  ),
-                  if (existing != null)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
-                      child: Text(
-                        'To change the amount, delete the loan and add it '
-                        'again.',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
+                  if (existing != null) ...[
+                    // The amount can't be changed once the loan exists.
+                    const LoanSectionLabel('Amount lent'),
+                    Text(
+                      Money.format(existing.amountCents),
+                      style: theme.textTheme.titleMedium,
+                    ),
+                    Text(
+                      'To change the amount, delete the loan and add it '
+                      'again.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
-                  const LoanSectionLabel('Due in'),
+                  ] else ...[
+                    const LoanSectionLabel('Date lent'),
+                    LoanDateButton(
+                      key: const Key('date-lent'),
+                      date: _lentOn,
+                      onTap: _saving ? null : _pickLentOn,
+                    ),
+                  ],
+                  // The due date, with its shortcuts right under it.
+                  const LoanSectionLabel('Due date'),
+                  LoanDateButton(
+                    key: const Key('date-due'),
+                    date: _dueOn,
+                    emptyText: 'No due date',
+                    clearTooltip: 'Clear due date',
+                    onTap: _saving ? null : _pickDueOn,
+                    onClear: _saving
+                        ? null
+                        : () => setState(() => _dueOn = null),
+                  ),
+                  const SizedBox(height: 8),
                   DueShortcuts(
                     lentOn: _lentOn,
                     dueOn: _dueOn,
                     onChanged: _saving
                         ? null
                         : (date) => setState(() => _dueOn = date),
+                  ),
+                  const LoanSectionLabel('Notes'),
+                  TextFormField(
+                    key: const Key('loan-note'),
+                    controller: _noteController,
+                    enabled: !_saving,
+                    decoration: const InputDecoration(
+                      hintText: 'What was this for?',
+                      // Hide the "0/500" counter; the limit still applies.
+                      counterText: '',
+                    ),
+                    maxLength: 500,
+                    minLines: 1,
+                    maxLines: 3,
+                    textCapitalization: TextCapitalization.sentences,
                   ),
                 ],
               ),
