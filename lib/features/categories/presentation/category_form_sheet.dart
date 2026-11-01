@@ -215,7 +215,18 @@ class _CategoryFormSheetState extends ConsumerState<CategoryFormSheet> {
                     )
                   : const Text('Save'),
             ),
-            if (_isEditing)
+            if (_isEditing && widget.existing!.isSalary)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(
+                  'Needed for your budget cycle, so it can’t be archived.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              )
+            else if (_isEditing)
               TextButton(
                 onPressed: _saving ? null : _archive,
                 style: TextButton.styleFrom(

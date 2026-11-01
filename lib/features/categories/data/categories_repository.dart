@@ -46,6 +46,7 @@ class CategoriesRepository {
                 'kind': c.kind.name,
                 'icon': c.icon,
                 'color': c.color,
+                if (c.isSalary) 'is_salary': true,
               },
           ],
           // If two screens do this at the same moment, skip duplicates.

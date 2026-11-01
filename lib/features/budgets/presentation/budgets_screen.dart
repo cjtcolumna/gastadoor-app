@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/screen_padding.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../categories/data/categories_repository.dart';
 import '../../transactions/data/transactions_repository.dart';
+import '../data/budget_cycle_provider.dart';
 import '../data/budgets_provider.dart';
+import '../domain/budget_cycle.dart';
 import 'budget_form_sheet.dart';
 import 'budget_progress_tile.dart';
 
@@ -20,7 +21,11 @@ class BudgetsScreen extends ConsumerWidget {
     final progress = ref.watch(budgetProgressProvider);
     final categories = ref.watch(categoriesProvider).value ?? const [];
     final byId = {for (final c in categories) c.id: c};
-    final month = DateFormat.MMMM().format(DateTime.now());
+    // "for October", "for Oct 15 – Oct 29", or "since Oct 15".
+    final period = ref.watch(currentPeriodProvider).value;
+    final phrase = periodPhrase(
+      period ?? BudgetCycle.calendarMonth.periodAt(DateTime.now()),
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -40,7 +45,8 @@ class BudgetsScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(4, 4, 4, 12),
               child: Text(
-                'Monthly limits for $month. Tap a budget to change it.',
+                'Limits $phrase. They start over each budget period. '
+                'Tap a budget to change it.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),

@@ -5,17 +5,19 @@ import '../../../core/utils/friendly_error.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dates.dart';
 import '../../../core/utils/money.dart';
-import '../../../core/widgets/money_text_field.dart';
+import '../../../core/widgets/amount_hero_field.dart';
 import '../../accounts/data/accounts_provider.dart';
 import '../../accounts/domain/account.dart';
 import '../../accounts/domain/account_groups.dart';
-import '../../accounts/presentation/account_type_ui.dart';
-import '../../accounts/presentation/account_avatar.dart';
+import '../../accounts/presentation/account_picker_cards.dart';
 import '../../categories/data/categories_repository.dart';
+import '../../budgets/data/budgets_provider.dart';
+import '../../budgets/domain/budget_progress.dart';
 import '../../categories/domain/category.dart';
 import '../../categories/presentation/category_form_sheet.dart';
-import '../../categories/presentation/category_visuals.dart';
+import '../../categories/presentation/category_pill.dart';
 import '../data/transaction_actions.dart';
+import '../data/transactions_repository.dart';
 import '../domain/transaction.dart';
 import '../domain/transaction_draft.dart';
 
@@ -79,6 +81,11 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
   late TransactionKind _kind =
       widget.existing?.kind ?? widget.initialKind ?? TransactionKind.expense;
   late String? _categoryId = widget.existing?.categoryId;
+
+  /// False until the user picks (or clears) a category. Until then a new
+  /// transaction starts on the category used last time for this kind.
+  /// Editing counts as picked, so an old transaction keeps what it had.
+  late bool _categoryPicked = widget.existing != null;
   late String? _accountId =
       widget.existing?.accountId ?? widget.initialAccountId;
   late String? _toAccountId =
@@ -111,8 +118,10 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
   void _changeKind(TransactionKind kind) {
     setState(() {
       _kind = kind;
-      // Expense categories don't fit income (and transfers have none).
+      // Expense categories don't fit income (and transfers have none), so
+      // start again from the last category used for the new kind.
       _categoryId = null;
+      _categoryPicked = false;
     });
   }
 
@@ -128,7 +137,11 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
     if (picked != null) setState(() => _date = dateOnly(picked));
   }
 
-  Future<void> _save(String? accountId, String? toAccountId) async {
+  Future<void> _save(
+    String? accountId,
+    String? toAccountId,
+    String? categoryId,
+  ) async {
     if (!_formKey.currentState!.validate()) return;
     if (accountId == null) {
       setState(() => _error = 'Add an account first (Accounts tab).');
@@ -146,7 +159,7 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
       amountCents: Money.parseToCents(_amountController.text)!,
       accountId: accountId,
       toAccountId: toAccountId,
-      categoryId: _categoryId,
+      categoryId: _isTransfer ? null : categoryId,
       occurredOn: _date,
       note: _noteController.text,
     );
@@ -213,129 +226,187 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
     final categories = (ref.watch(categoriesProvider).value ?? const [])
         .where((c) => c.kind == _kind)
         .toList();
-    // Until the user picks one, use their first account (usually Cash).
-    final accountId = _accountId ?? accounts.firstOrNull?.id;
+    // Until the user picks one, use the account they used last time
+    // (or their first account if that one is missing).
+    final accountId =
+        _accountId ??
+        defaultAccountId(accounts, ref.watch(lastUsedAccountIdProvider).value);
     // Transfers: "To" can't be the same as "From". If nothing valid is
     // picked yet, use the first other account.
     final toAccountId = (_toAccountId != null && _toAccountId != accountId)
         ? _toAccountId
         : accounts.where((a) => a.id != accountId).firstOrNull?.id;
+    // Each account's balance, shown small under its name in the pickers.
+    final balances = ref.watch(accountBalancesProvider).value;
     final kindWord = _kind.name; // 'expense', 'income', or 'transfer'
+    // The picked category, or (until the user picks) the one used last
+    // time for this kind, as long as it still exists.
+    final lastCategoryId = _isTransfer
+        ? null
+        : ref.watch(lastCategoryIdProvider(_kind)).value;
+    final categoryId = _categoryPicked
+        ? _categoryId
+        : (categories.any((c) => c.id == lastCategoryId)
+              ? lastCategoryId
+              : null);
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(24, 0, 24, 24 + keyboard),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              _isEditing ? 'Edit $kindWord' : 'New $kindWord',
-              style: theme.textTheme.titleLarge,
+    // This month's budget for each category (shown small inside its pill).
+    final budgetByCategory = <String, BudgetProgress>{
+      for (final p
+          in ref.watch(budgetProgressProvider).value ??
+              const <BudgetProgress>[])
+        if (p.budget.categoryId != null) p.budget.categoryId!: p,
+    };
+
+    // The fields scroll; the Save button stays pinned below them.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    _isEditing ? 'Edit $kindWord' : 'New $kindWord',
+                    style: theme.textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 16),
+                  _KindSwitch(
+                    kind: _kind,
+                    onChanged: _saving ? null : _changeKind,
+                  ),
+                  const SizedBox(height: 16),
+                  AmountHeroField(
+                    controller: _amountController,
+                    color: theme.colorScheme.onSurface,
+                    autofocus: !_isEditing,
+                    enabled: !_saving,
+                  ),
+                  const _SectionLabel('Notes'),
+                  TextFormField(
+                    controller: _noteController,
+                    enabled: !_saving,
+                    decoration: InputDecoration(
+                      hintText: switch (_kind) {
+                        TransactionKind.expense => 'What was this for?',
+                        TransactionKind.income => 'Where did this come from?',
+                        TransactionKind.transfer => 'Why are you moving this?',
+                      },
+                      // Hide the "0/500" counter; the limit still applies.
+                      counterText: '',
+                    ),
+                    maxLength: 500,
+                    minLines: 1,
+                    maxLines: 3,
+                    textCapitalization: TextCapitalization.sentences,
+                  ),
+                  if (_isTransfer) ...[
+                    // Transfers: where the money leaves, and where it arrives.
+                    const _SectionLabel('From'),
+                    AccountPickerCards(
+                      balances: balances,
+                      accounts: accounts,
+                      archivedAccount: _archivedOriginal(accounts),
+                      selectedId: accountId,
+                      onChanged: _saving
+                          ? null
+                          : (id) => setState(() => _accountId = id),
+                    ),
+                    const _SectionLabel('To'),
+                    AccountPickerCards(
+                      balances: balances,
+                      accounts: accounts,
+                      // You can't transfer into the same account.
+                      disabledId: accountId,
+                      selectedId: toAccountId,
+                      emptyText: 'Add a second account to make transfers.',
+                      onChanged: _saving
+                          ? null
+                          : (id) => setState(() => _toAccountId = id),
+                    ),
+                  ] else ...[
+                    const _SectionLabel('Category'),
+                    _CategoryPicker(
+                      categories: categories,
+                      budgets: budgetByCategory,
+                      selectedId: categoryId,
+                      onChanged: _saving
+                          ? null
+                          : (id) => setState(() {
+                              _categoryId = id;
+                              _categoryPicked = true;
+                            }),
+                      // Quick add: opens the category form on top of this one.
+                      onAddNew: _saving
+                          ? null
+                          : () => showCategoryFormSheet(context, kind: _kind),
+                    ),
+                    const _SectionLabel('Account'),
+                    AccountPickerCards(
+                      balances: balances,
+                      accounts: accounts,
+                      archivedAccount: _archivedOriginal(accounts),
+                      selectedId: accountId,
+                      onChanged: _saving
+                          ? null
+                          : (id) => setState(() => _accountId = id),
+                    ),
+                  ],
+                  const _SectionLabel('Date'),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: _saving ? null : _pickDate,
+                      icon: const Icon(Icons.calendar_today_rounded, size: 18),
+                      label: Text(fullDate(_date)),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            _KindSwitch(kind: _kind, onChanged: _saving ? null : _changeKind),
-            const SizedBox(height: 16),
-            MoneyTextField(
-              controller: _amountController,
-              mustBePositive: true,
-              autofocus: !_isEditing,
-              large: true,
-              enabled: !_saving,
-            ),
-            if (_isTransfer) ...[
-              // Transfers: where the money leaves, and where it arrives.
-              const _SectionLabel('From'),
-              _AccountPicker(
-                accounts: accounts,
-                archivedAccount: _archivedOriginal(accounts),
-                selectedId: accountId,
-                onChanged: _saving
-                    ? null
-                    : (id) => setState(() => _accountId = id),
-              ),
-              const _SectionLabel('To'),
-              _AccountPicker(
-                // You can't transfer into the same account.
-                accounts: accounts.where((a) => a.id != accountId).toList(),
-                allAccounts: accounts,
-                selectedId: toAccountId,
-                emptyText: 'Add a second account to make transfers.',
-                onChanged: _saving
-                    ? null
-                    : (id) => setState(() => _toAccountId = id),
-              ),
-            ] else ...[
-              const _SectionLabel('Category'),
-              _CategoryPicker(
-                categories: categories,
-                selectedId: _categoryId,
-                onChanged: _saving
-                    ? null
-                    : (id) => setState(() => _categoryId = id),
-                // Quick add: opens the category form on top of this one.
-                onAddNew: _saving
-                    ? null
-                    : () => showCategoryFormSheet(context, kind: _kind),
-              ),
-              const _SectionLabel('Account'),
-              _AccountPicker(
-                accounts: accounts,
-                archivedAccount: _archivedOriginal(accounts),
-                selectedId: accountId,
-                onChanged: _saving
-                    ? null
-                    : (id) => setState(() => _accountId = id),
-              ),
-            ],
-            const _SectionLabel('Date'),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: OutlinedButton.icon(
-                onPressed: _saving ? null : _pickDate,
-                icon: const Icon(Icons.calendar_today_rounded, size: 18),
-                label: Text(friendlyDate(_date)),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _noteController,
-              enabled: !_saving,
-              decoration: const InputDecoration(
-                labelText: 'Note (optional)',
-                hintText: 'e.g. Jollibee with friends',
-              ),
-              maxLength: 500,
-              textCapitalization: TextCapitalization.sentences,
-            ),
-            if (_error != null) ...[
-              Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
-              const SizedBox(height: 12),
-            ],
-            FilledButton(
-              onPressed: _saving ? null : () => _save(accountId, toAccountId),
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(52),
-              ),
-              child: _saving
-                  ? const SizedBox.square(
-                      dimension: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2.5),
-                    )
-                  : const Text('Save'),
-            ),
-            if (_isEditing)
-              TextButton(
-                onPressed: _saving ? null : _delete,
-                style: TextButton.styleFrom(
-                  foregroundColor: theme.colorScheme.error,
-                ),
-                child: Text('Delete $kindWord'),
-              ),
-          ],
+          ),
         ),
-      ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(24, 8, 24, 16 + keyboard),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_error != null) ...[
+                Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
+                const SizedBox(height: 12),
+              ],
+              FilledButton(
+                onPressed: _saving
+                    ? null
+                    : () => _save(accountId, toAccountId, categoryId),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                ),
+                child: _saving
+                    ? const SizedBox.square(
+                        dimension: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2.5),
+                      )
+                    : const Text('Save'),
+              ),
+              if (_isEditing)
+                TextButton(
+                  onPressed: _saving ? null : _delete,
+                  style: TextButton.styleFrom(
+                    foregroundColor: theme.colorScheme.error,
+                  ),
+                  child: Text('Delete $kindWord'),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -413,16 +484,21 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-/// Category chips. Tapping the selected chip again clears it.
+/// Category pills (same height, width fits the content), ending with a
+/// "+ New" pill. Tapping the selected pill again clears it.
 class _CategoryPicker extends StatelessWidget {
   const _CategoryPicker({
     required this.categories,
+    required this.budgets,
     required this.selectedId,
     required this.onChanged,
     this.onAddNew,
   });
 
   final List<Category> categories;
+
+  /// Each category's budget for this month (a category may have none).
+  final Map<String, BudgetProgress> budgets;
   final String? selectedId;
   final ValueChanged<String?>? onChanged;
 
@@ -431,93 +507,24 @@ class _CategoryPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    // Each pill is as wide as its content; all have the same height.
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
         for (final category in categories)
-          ChoiceChip(
-            avatar: Icon(
-              categoryIconFor(category.icon),
-              color: categoryColorFor(category.color, colors),
-            ),
-            // Keep the icon visible when selected (no check mark over it),
-            // and tint the chip with the category's own color.
-            showCheckmark: false,
-            selectedColor: categoryColorFor(
-              category.color,
-              colors,
-            ).withValues(alpha: 0.16),
-            label: Text(category.name),
+          CategoryPill(
+            category: category,
+            budget: budgets[category.id],
             selected: category.id == selectedId,
-            onSelected: onChanged == null
+            onTap: onChanged == null
                 ? null
-                : (on) => onChanged!(on ? category.id : null),
+                : () => onChanged!(
+                    category.id == selectedId ? null : category.id,
+                  ),
           ),
-        ActionChip(
-          avatar: const Icon(Icons.add_rounded),
-          label: const Text('New'),
-          tooltip: 'New category',
-          onPressed: onAddNew,
-        ),
-      ],
-    );
-  }
-}
-
-/// Account chips (Cash, GCash, BDO...). One is always selected.
-class _AccountPicker extends StatelessWidget {
-  const _AccountPicker({
-    required this.accounts,
-    required this.selectedId,
-    required this.onChanged,
-    this.archivedAccount,
-    this.allAccounts,
-    this.emptyText = 'No accounts yet. Add one in the Accounts tab.',
-  });
-
-  final List<Account> accounts;
-
-  /// Every account, used to name pockets "GoTyme › Travel" even when the
-  /// parent isn't one of the choices. Defaults to [accounts].
-  final List<Account>? allAccounts;
-  final String? selectedId;
-  final ValueChanged<String>? onChanged;
-
-  /// When editing an old transaction from an archived account, that account,
-  /// shown as a greyed-out chip so you can see where the money came from.
-  final Account? archivedAccount;
-
-  /// What to say when there are no accounts to pick.
-  final String emptyText;
-
-  @override
-  Widget build(BuildContext context) {
-    final archived = archivedAccount;
-    if (accounts.isEmpty && archived == null) {
-      return Text(emptyText);
-    }
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        if (archived != null)
-          ChoiceChip(
-            avatar: Icon(archived.type.icon, size: 18),
-            label: Text('${archived.name} (archived)'),
-            selected: archived.id == selectedId,
-            onSelected: null, // can't pick it for new money, only keep it
-          ),
-        for (final account in accounts)
-          ChoiceChip(
-            avatar: AccountAvatar(account: account, size: 20),
-            label: Text(accountLabel(account, allAccounts ?? accounts)),
-            selected: account.id == selectedId,
-            onSelected: onChanged == null
-                ? null
-                : (_) => onChanged!(account.id),
-          ),
+        // "+ New" is a pill too, at the end of the categories.
+        NewCategoryPill(onTap: onAddNew),
       ],
     );
   }

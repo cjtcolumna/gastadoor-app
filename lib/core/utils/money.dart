@@ -21,6 +21,37 @@ class Money {
     return formatter.format(cents / 100);
   }
 
+  /// A very short amount that fits in a tiny pill: at most 3 digits, with
+  /// k or m for thousands and millions. 85000 -> "₱850", 150000 -> "₱1.5k",
+  /// 1050000 -> "₱10.5k", 10500000 -> "₱105k", 120000000 -> "₱1.2m".
+  ///
+  /// Cents are cut off, never rounded up, so a short amount never looks
+  /// bigger than the real one. Negative amounts show as ₱0. Whole-number
+  /// math only, so there are no rounding surprises.
+  static String formatShort(int cents, {String symbol = '₱'}) {
+    final pesos = (cents < 0 ? 0 : cents) ~/ 100;
+    if (pesos < 1000) return '$symbol$pesos';
+
+    final (unit, suffix) = pesos >= 1000000 ? (1000000, 'm') : (1000, 'k');
+    final whole = pesos ~/ unit;
+    // Keep 3 digits in total: "1.5k" and "10.5k" have one decimal or
+    // fewer, "1.05k" has two, "105k" has none.
+    final decimals = (3 - whole.toString().length).clamp(0, 2);
+    var fraction = '';
+    if (decimals > 0) {
+      var scale = 1;
+      for (var i = 0; i < decimals; i++) {
+        scale *= 10;
+      }
+      fraction = ((pesos % unit) * scale ~/ unit).toString().padLeft(
+        decimals,
+        '0',
+      );
+      fraction = fraction.replaceFirst(RegExp(r'0+$'), '');
+    }
+    return '$symbol$whole${fraction.isEmpty ? '' : '.$fraction'}$suffix';
+  }
+
   /// Turns cents into plain text for an input box, e.g. 123450 -> "1234.50".
   /// Uses whole-number math only, so there are no rounding surprises.
   static String toInputText(int cents) {

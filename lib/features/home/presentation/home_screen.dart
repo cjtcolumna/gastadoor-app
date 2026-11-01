@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -13,7 +12,9 @@ import '../../accounts/data/accounts_provider.dart';
 import '../../accounts/domain/account_groups.dart';
 import '../../accounts/domain/balances.dart';
 import '../../accounts/presentation/account_balance_tile.dart';
+import '../../budgets/data/budget_cycle_provider.dart';
 import '../../budgets/data/budgets_provider.dart';
+import '../../budgets/domain/budget_cycle.dart';
 import '../../budgets/presentation/budget_form_sheet.dart';
 import '../../budgets/presentation/budget_progress_tile.dart';
 import '../../budgets/presentation/budgets_screen.dart';
@@ -144,7 +145,11 @@ class _MonthSummary extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.appColors;
     final totals = ref.watch(monthTotalsProvider).value ?? MonthTotals.zero;
-    final month = DateFormat.MMMM().format(DateTime.now());
+    // "October", or "Oct 15 – Oct 29" when budgets follow a custom cycle.
+    final period = ref.watch(currentPeriodProvider).value;
+    final month = periodLabel(
+      period ?? BudgetCycle.calendarMonth.periodAt(DateTime.now()),
+    );
 
     return Row(
       children: [

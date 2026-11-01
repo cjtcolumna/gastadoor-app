@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../accounts/data/accounts_provider.dart';
+import '../../budgets/data/budget_cycle_provider.dart';
 import '../domain/transaction_draft.dart';
 import 'transactions_repository.dart';
 
@@ -32,8 +33,12 @@ class TransactionActions {
   /// the next time a screen asks.
   void _refreshScreens() {
     _ref.invalidate(accountBalancesProvider);
-    // Month totals and budgets both update from this one list.
+    // Home totals and budgets both update from this one list of the
+    // current budget period.
+    _ref.invalidate(transactionsInPeriodProvider);
     _ref.invalidate(transactionsInMonthProvider);
+    // A new salary starts a new budget period (salary cycle only).
+    _ref.invalidate(salaryDatesProvider);
     _ref.invalidate(sixMonthTrendProvider);
     _ref.invalidate(historyPageProvider);
   }

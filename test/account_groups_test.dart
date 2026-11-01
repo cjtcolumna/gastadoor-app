@@ -73,6 +73,34 @@ void main() {
     expect(accountLabel(travel, [travel]), 'Travel');
   });
 
+  group('defaultAccountId', () {
+    test('uses the last used account when it is still there', () {
+      expect(defaultAccountId(all, 't'), 't');
+    });
+
+    test('uses the first account when nothing was used yet', () {
+      expect(defaultAccountId(all, null), 'g');
+    });
+
+    test('uses the first account when the last one is gone', () {
+      expect(defaultAccountId(all, 'archived-one'), 'g');
+    });
+
+    test('is null when there are no accounts', () {
+      expect(defaultAccountId(const [], 'g'), isNull);
+    });
+  });
+
+  test('mainPillLabel only adds "(main)" when a pocket has the same name', () {
+    expect(mainPillLabel(groupAccounts(all).first), 'GoTyme');
+
+    final clash = groupAccounts([
+      gotyme,
+      account('x', 'gotyme', parentId: 'g'),
+    ]);
+    expect(mainPillLabel(clash.first), 'GoTyme (main)');
+  });
+
   test('idWithChildren includes the pockets', () {
     expect(idWithChildren('g', all), {'g', 't', 'e'});
     expect(idWithChildren('t', all), {'t'});

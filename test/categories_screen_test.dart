@@ -52,6 +52,7 @@ const salary = Category(
   kind: TransactionKind.income,
   icon: 'work',
   color: 'green',
+  isSalary: true,
 );
 const oldPets = Category(
   id: 'pets',
@@ -166,6 +167,21 @@ void main() {
     await tester.tap(find.widgetWithText(TextButton, 'Archive'));
     await tester.pumpAndSettle();
     expect(actions.archived, ['food']);
+  });
+
+  testWidgets('Salary is needed, so it cannot be archived', (tester) async {
+    await pumpScreen(tester);
+    await tapVisible(tester, find.text('Salary'));
+    expect(find.text('Edit category'), findsOneWidget);
+    expect(find.text('Archive category'), findsNothing);
+    expect(find.textContaining('Needed for your budget cycle'), findsOneWidget);
+
+    // It can still be renamed, and it stays the salary category.
+    await tester.enterText(nameField(), 'Sweldo');
+    await tapVisible(tester, save());
+    final c = actions.saved.single;
+    expect(c.name, 'Sweldo');
+    expect(c.isSalary, isTrue);
   });
 
   testWidgets('archived categories can be restored', (tester) async {

@@ -7,6 +7,22 @@ String toDbDate(DateTime d) =>
 /// The date part only (midnight), so "today" compares equal all day long.
 DateTime dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
+/// The whole date, with "Today" or "Yesterday" in front when it fits:
+/// "Today, October 31, 2026", "Yesterday, October 30, 2026", or just
+/// "October 1, 2026". [today] can be passed in for tests.
+String fullDate(DateTime date, {DateTime? today}) {
+  final day = dateOnly(date);
+  final now = dateOnly(today ?? DateTime.now());
+  final month = const [
+    'January', 'February', 'March', 'April', 'May', 'June', //
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ][day.month - 1];
+  final text = '$month ${day.day}, ${day.year}';
+  if (day == now) return 'Today, $text';
+  if (day == now.subtract(const Duration(days: 1))) return 'Yesterday, $text';
+  return text;
+}
+
 /// "Today", "Yesterday", or a short date like "Oct 20, 2026".
 /// [today] can be passed in so tests don't depend on the real clock.
 String friendlyDate(DateTime date, {DateTime? today}) {

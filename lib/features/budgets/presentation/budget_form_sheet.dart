@@ -180,6 +180,11 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
             ),
             _TargetPicker(
               categories: expenseCategories,
+              // New budgets are per category only. An old "All spending"
+              // budget can still be opened, changed or deleted.
+              showAllSpending:
+                  widget.existing != null &&
+                  widget.existing!.categoryId == null,
               taken: taken,
               selected: _picked ? _categoryId : _notPicked,
               onChanged: _saving
@@ -221,10 +226,12 @@ class _BudgetFormSheetState extends ConsumerState<BudgetFormSheet> {
 /// A value no real category id can have, meaning "nothing chosen yet".
 const _notPicked = '__none__';
 
-/// "All spending" plus one chip per expense category.
+/// One chip per expense category (plus "All spending" when editing an old
+/// budget that has it).
 class _TargetPicker extends StatelessWidget {
   const _TargetPicker({
     required this.categories,
+    required this.showAllSpending,
     required this.taken,
     required this.selected,
     required this.onChanged,
@@ -232,7 +239,10 @@ class _TargetPicker extends StatelessWidget {
 
   final List<Category> categories;
 
-  /// Category ids (and null for "All spending") that already have a budget.
+  /// True only when editing a budget that already is "All spending".
+  final bool showAllSpending;
+
+  /// Category ids that already have a budget.
   final Set<String?> taken;
   final String? selected;
   final ValueChanged<String?>? onChanged;
@@ -244,7 +254,7 @@ class _TargetPicker extends StatelessWidget {
       spacing: 8,
       runSpacing: 8,
       children: [
-        if (!taken.contains(null))
+        if (showAllSpending)
           ChoiceChip(
             avatar: Icon(
               Icons.account_balance_wallet_rounded,
