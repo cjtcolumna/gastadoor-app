@@ -11,6 +11,7 @@ import '../../../core/widgets/skeleton.dart';
 import '../data/loans_provider.dart';
 import '../domain/loan_summary.dart';
 import 'loan_form_sheet.dart';
+import 'loan_status_pill.dart';
 
 /// Everyone who owes you money, with each loan and what is still owed.
 class LoansScreen extends ConsumerWidget {
@@ -57,7 +58,8 @@ class LoansScreen extends ConsumerWidget {
   }
 }
 
-/// The big "Owed to you" total at the top.
+/// The big "Owed to you" total at the top. Money owed to you is an asset, so
+/// it is green: a soft green card with the amount in the income green.
 class _OwedCard extends StatelessWidget {
   const _OwedCard({required this.items});
 
@@ -66,38 +68,54 @@ class _OwedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = context.appColors;
     final people = groupByPerson(items).where((g) => !g.settled).length;
 
     return Card(
+      color: colors.incomeSoft,
       child: Padding(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Text(
-              'Owed to you',
-              style: theme.textTheme.titleSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+            CircleAvatar(
+              radius: 26,
+              backgroundColor: theme.colorScheme.surface,
+              foregroundColor: colors.income,
+              child: const Icon(Icons.handshake_rounded, size: 28),
             ),
-            const SizedBox(height: 4),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                Money.format(totalOwedCents(items)),
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              people == 0
-                  ? 'Nobody owes you right now'
-                  : 'From $people ${people == 1 ? 'person' : 'people'}',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Owed to you',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      Money.format(totalOwedCents(items)),
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: colors.income,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    people == 0
+                        ? 'Nobody owes you right now'
+                        : 'From $people ${people == 1 ? 'person' : 'people'}',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -107,7 +125,8 @@ class _OwedCard extends StatelessWidget {
   }
 }
 
-/// One borrower: their name and total, then a row for each loan.
+/// One borrower: a letter circle, their name and total, then a row for each
+/// loan.
 class _PersonSection extends StatelessWidget {
   const _PersonSection({required this.group});
 
@@ -116,6 +135,11 @@ class _PersonSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = context.appColors;
+    final name = group.person;
+    final initial = name.isEmpty
+        ? '?'
+        : String.fromCharCode(name.runes.first).toUpperCase();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -124,9 +148,23 @@ class _PersonSection extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
           child: Row(
             children: [
+              // Same soft-green letter circle as the profile in Settings.
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: colors.incomeSoft,
+                foregroundColor: theme.colorScheme.primary,
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  group.person,
+                  name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleMedium,
@@ -148,7 +186,12 @@ class _PersonSection extends StatelessWidget {
         Card(
           clipBehavior: Clip.antiAlias,
           child: Column(
-            children: [for (final loan in group.loans) LoanTile(loan: loan)],
+            children: [
+              for (final (i, loan) in group.loans.indexed) ...[
+                if (i > 0) const Divider(height: 1),
+                LoanTile(loan: loan),
+              ],
+            ],
           ),
         ),
       ],
@@ -156,7 +199,8 @@ class _PersonSection extends StatelessWidget {
   }
 }
 
-/// One loan: what is left, the original amount, and its status.
+/// One loan: what is left, the original amount, how much has come back, and
+/// a colored pill with its status.
 class LoanTile extends StatelessWidget {
   const LoanTile({super.key, required this.loan});
 
@@ -166,40 +210,82 @@ class LoanTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = context.appColors;
+    final grey = theme.colorScheme.onSurfaceVariant;
     final status = loan.statusOn(DateTime.now());
-    final statusColor = switch (status) {
-      LoanStatus.overdue => colors.expense,
-      LoanStatus.paid => colors.income,
-      _ => theme.colorScheme.onSurfaceVariant,
-    };
+    final total = loan.loan.amountCents;
+    final note = dueNote(loan);
+    // For the bar only, so a double is fine here (it is not money).
+    final share = total == 0 ? 0.0 : loan.paidCents / total;
 
-    return ListTile(
+    return InkWell(
       // Loans can be opened from Home (/loans) or More (/more/loans), so add
       // the loan's id to whichever address this screen is on.
       onTap: () =>
           context.go('${GoRouterState.of(context).uri.path}/${loan.loan.id}'),
-      title: Text(
-        loan.isPaid
-            ? Money.format(loan.loan.amountCents)
-            : Money.format(loan.remainingCents),
-        style: theme.textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w700,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    Money.format(loan.isPaid ? total : loan.remainingCents),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      // Paid-back loans fade, so the ones to chase stand out.
+                      color: loan.isPaid ? grey : null,
+                    ),
+                  ),
+                ),
+                Icon(
+                  loan.isPaid
+                      ? Icons.check_circle_rounded
+                      : Icons.chevron_right_rounded,
+                  color: loan.isPaid ? colors.income : grey,
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Lent ${friendlyDate(loan.loan.lentOn)} · '
+              'of ${Money.format(total)}',
+              style: theme.textTheme.bodySmall?.copyWith(color: grey),
+            ),
+            if (loan.paidCents > 0 && !loan.isPaid) ...[
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: share.clamp(0.0, 1.0),
+                  minHeight: 6,
+                ),
+              ),
+            ],
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                LoanStatusPill(status),
+                if (note != null) ...[
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      note,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: status == LoanStatus.overdue
+                            ? colors.expense
+                            : grey,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
         ),
-      ),
-      subtitle: Text(
-        'Lent ${friendlyDate(loan.loan.lentOn)} · '
-        'of ${Money.format(loan.loan.amountCents)}\n'
-        '${statusLine(loan)}',
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-      ),
-      isThreeLine: true,
-      trailing: Icon(
-        status == LoanStatus.paid
-            ? Icons.check_circle_rounded
-            : Icons.chevron_right_rounded,
-        color: statusColor,
       ),
     );
   }

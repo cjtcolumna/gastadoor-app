@@ -89,31 +89,44 @@ void main() {
     });
   });
 
-  group('status line', () {
-    test('says what is going on in a few words', () {
-      LoanWithPayments make(DateTime? due, [List<LoanPayment> p = const []]) =>
-          LoanWithPayments(loan('a', 'Mark', 1000, dueOn: due), p);
+  group('status words', () {
+    LoanWithPayments make(DateTime? due, [List<LoanPayment> p = const []]) =>
+        LoanWithPayments(loan('a', 'Mark', 1000, dueOn: due), p);
 
-      expect(statusLine(make(null), today: today), 'Not paid yet');
+    test('each status has a label for its pill', () {
+      expect(statusLabel(make(null).statusOn(today)), 'Not paid yet');
       expect(
-        statusLine(make(DateTime(2026, 11, 20)), today: today),
-        'Due Nov 20, 2026',
-      );
-      expect(
-        statusLine(make(null, [pay('a', 100)]), today: today),
+        statusLabel(make(null, [pay('a', 100)]).statusOn(today)),
         'Partly paid',
       );
       expect(
-        statusLine(make(DateTime(2026, 11, 20), [pay('a', 100)]), today: today),
-        'Partly paid · Due Nov 20, 2026',
+        statusLabel(make(DateTime(2026, 10, 5)).statusOn(today)),
+        'Overdue',
       );
       expect(
-        statusLine(make(DateTime(2026, 10, 5)), today: today),
-        'Overdue · was due Oct 5, 2026',
-      );
-      expect(
-        statusLine(make(null, [pay('a', 1000)]), today: today),
+        statusLabel(make(null, [pay('a', 1000)]).statusOn(today)),
         'Paid back',
+      );
+    });
+
+    test('the due date note: upcoming, passed, none, or paid', () {
+      expect(dueNote(make(null), today: today), isNull);
+      expect(
+        dueNote(make(DateTime(2026, 11, 20)), today: today),
+        'Due Nov 20, 2026',
+      );
+      expect(
+        dueNote(make(DateTime(2026, 11, 20), [pay('a', 100)]), today: today),
+        'Due Nov 20, 2026',
+      );
+      expect(
+        dueNote(make(DateTime(2026, 10, 5)), today: today),
+        'was due Oct 5, 2026',
+      );
+      // Once it is paid back, the due date no longer matters.
+      expect(
+        dueNote(make(DateTime(2026, 10, 5), [pay('a', 1000)]), today: today),
+        isNull,
       );
     });
   });

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/money.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/skeleton.dart';
@@ -63,18 +64,18 @@ class _OwedToYouCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = context.appColors;
     final people = groupByPerson(items).where((g) => !g.settled).length;
 
     return Card(
       clipBehavior: Clip.antiAlias,
       child: ListTile(
         onTap: () => context.go('/loans'),
+        // Money owed to you is an asset: soft green with the income green.
         leading: CircleAvatar(
-          backgroundColor: theme.colorScheme.primaryContainer,
-          child: Icon(
-            Icons.handshake_rounded,
-            color: theme.colorScheme.onPrimaryContainer,
-          ),
+          backgroundColor: colors.incomeSoft,
+          foregroundColor: colors.income,
+          child: const Icon(Icons.handshake_rounded),
         ),
         title: const Text('Owed to you'),
         subtitle: Text(
@@ -86,6 +87,7 @@ class _OwedToYouCard extends StatelessWidget {
           Money.format(totalOwedCents(items)),
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w700,
+            color: colors.income,
           ),
         ),
       ),

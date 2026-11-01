@@ -12,6 +12,7 @@ import 'package:gastadoor/features/loans/domain/loan_summary.dart';
 import 'package:gastadoor/features/loans/presentation/loan_detail_screen.dart';
 import 'package:gastadoor/features/loans/presentation/loan_fields.dart';
 import 'package:gastadoor/features/loans/presentation/loan_payment_sheet.dart';
+import 'package:gastadoor/features/loans/presentation/loan_status_pill.dart';
 import 'package:gastadoor/features/loans/presentation/loans_screen.dart';
 
 /// What the screens asked to lend: person, cents, account id (null = none).
@@ -158,6 +159,35 @@ void main() {
       expect(find.text('₱6,000.00 owed'), findsOneWidget);
       expect(find.text('Ana'), findsOneWidget);
       expect(find.text('All paid back'), findsOneWidget);
+    });
+
+    testWidgets('every loan has a status pill, and partly paid ones a bar', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        const LoansScreen(),
+        loans: [
+          LoanWithPayments(loan('a', 'Mark', 1000000), [payment('a', 400000)]),
+          LoanWithPayments(loan('b', 'Ana', 200000), [payment('b', 200000)]),
+          LoanWithPayments(loan('c', 'Zed', 50000), const []),
+          LoanWithPayments(
+            loan('d', 'Kim', 70000).copyWith(dueOn: DateTime(2020, 1, 1)),
+            const [],
+          ),
+        ],
+      );
+
+      expect(find.text('Partly paid'), findsOneWidget);
+      expect(find.text('Paid back'), findsOneWidget);
+      expect(find.text('Not paid yet'), findsOneWidget);
+      expect(find.text('Overdue'), findsOneWidget);
+      expect(find.textContaining('was due'), findsOneWidget);
+      // Only the partly paid loan shows how much has come back.
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      // A letter circle for each person.
+      expect(find.text('M'), findsOneWidget);
+      expect(find.text('K'), findsOneWidget);
     });
 
     testWidgets('with no loans it invites you to lend money', (tester) async {
@@ -372,6 +402,50 @@ void main() {
       expect(find.text('No due date'), findsNothing);
       // Date lent and due date now both show today.
       expect(find.text(fullDate(DateTime.now())), findsNWidgets(2));
+    });
+  });
+
+  group('LoanStatusPill', () {
+    /// The pill's fill and text colors.
+    Future<(Color?, Color?)> colorsOf(
+      WidgetTester tester,
+      LoanStatus status,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(body: LoanStatusPill(status)),
+        ),
+      );
+      final fill =
+          (tester
+                      .widget<DecoratedBox>(find.byType(DecoratedBox).first)
+                      .decoration
+                  as BoxDecoration)
+              .color;
+      final text = tester.widget<Text>(find.byType(Text)).style?.color;
+      return (fill, text);
+    }
+
+    testWidgets('uses the money colors: green, blue and red', (tester) async {
+      const colors = AppColors.light;
+      expect(await colorsOf(tester, LoanStatus.paid), (
+        colors.incomeSoft,
+        colors.income,
+      ));
+      expect(await colorsOf(tester, LoanStatus.partlyPaid), (
+        colors.transferSoft,
+        colors.transfer,
+      ));
+      expect(await colorsOf(tester, LoanStatus.overdue), (
+        colors.expenseSoft,
+        colors.expense,
+      ));
+    });
+
+    testWidgets('waiting is amber', (tester) async {
+      final (fill, _) = await colorsOf(tester, LoanStatus.outstanding);
+      expect(fill, AppColors.light.warning.withValues(alpha: 0.18));
     });
   });
 

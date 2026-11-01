@@ -16,6 +16,7 @@ import '../domain/loan.dart';
 import '../domain/loan_summary.dart';
 import 'loan_form_sheet.dart';
 import 'loan_payment_sheet.dart';
+import 'loan_status_pill.dart';
 
 /// One loan: how much is left, every repayment, and buttons to record a new
 /// one, edit, or delete.
@@ -208,7 +209,8 @@ class _SummaryCard extends StatelessWidget {
     final status = loan.statusOn(DateTime.now());
     // For the bar only, so a double is fine here (it is not money).
     final share = total == 0 ? 0.0 : loan.paidCents / total;
-    final note = loan.loan.note;
+    final note = dueNote(loan);
+    final loanNote = loan.loan.note;
 
     return Card(
       child: Padding(
@@ -248,14 +250,24 @@ class _SummaryCard extends StatelessWidget {
               '${Money.format(total)}',
               style: theme.textTheme.bodyMedium,
             ),
-            const SizedBox(height: 4),
-            Text(
-              statusLine(loan),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: status == LoanStatus.overdue
-                    ? colors.expense
-                    : theme.colorScheme.onSurfaceVariant,
-              ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                LoanStatusPill(status),
+                if (note != null) ...[
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      note,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: status == LoanStatus.overdue
+                            ? colors.expense
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
             const Divider(height: 28),
             Text(
@@ -274,9 +286,9 @@ class _SummaryCard extends StatelessWidget {
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            if (note != null) ...[
+            if (loanNote != null) ...[
               const SizedBox(height: 8),
-              Text(note, style: theme.textTheme.bodyMedium),
+              Text(loanNote, style: theme.textTheme.bodyMedium),
             ],
           ],
         ),

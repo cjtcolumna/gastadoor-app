@@ -77,20 +77,25 @@ List<PersonLoans> groupByPerson(List<LoanWithPayments> loans) {
   return groups;
 }
 
-/// A short line for a loan row: "Overdue · was due Oct 5, 2026",
-/// "Partly paid · Due Nov 5, 2026", "Paid back" or "Not paid yet".
+/// The few words shown in a loan's colored pill.
+String statusLabel(LoanStatus status) => switch (status) {
+  LoanStatus.outstanding => 'Not paid yet',
+  LoanStatus.partlyPaid => 'Partly paid',
+  LoanStatus.paid => 'Paid back',
+  LoanStatus.overdue => 'Overdue',
+};
+
+/// The due date in words, shown next to the pill: "Due Nov 5, 2026" or, once
+/// it has passed, "was due Oct 5, 2026". Null when there is nothing to say
+/// (no due date, or the loan is paid back).
 /// [today] can be passed in so tests don't depend on the real clock.
-String statusLine(LoanWithPayments loan, {DateTime? today}) {
+String? dueNote(LoanWithPayments loan, {DateTime? today}) {
   final now = today ?? DateTime.now();
-  final status = loan.statusOn(now);
   final due = loan.loan.dueOn;
-  return switch (status) {
-    LoanStatus.paid => 'Paid back',
-    LoanStatus.overdue => 'Overdue · was due ${friendlyDate(due!, today: now)}',
-    LoanStatus.partlyPaid || LoanStatus.outstanding => [
-      if (status == LoanStatus.partlyPaid) 'Partly paid',
-      if (due != null) 'Due ${friendlyDate(due, today: now)}',
-      if (status == LoanStatus.outstanding && due == null) 'Not paid yet',
-    ].join(' · '),
+  if (due == null) return null;
+  return switch (loan.statusOn(now)) {
+    LoanStatus.paid => null,
+    LoanStatus.overdue => 'was due ${friendlyDate(due, today: now)}',
+    _ => 'Due ${friendlyDate(due, today: now)}',
   };
 }
