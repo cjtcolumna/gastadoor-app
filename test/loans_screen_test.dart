@@ -1,13 +1,17 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gastadoor/core/theme/app_theme.dart';
+import 'package:gastadoor/core/utils/dates.dart';
+import 'package:gastadoor/core/widgets/amount_hero_field.dart';
 import 'package:gastadoor/features/accounts/data/accounts_provider.dart';
 import 'package:gastadoor/features/accounts/domain/account.dart';
 import 'package:gastadoor/features/loans/data/loans_provider.dart';
 import 'package:gastadoor/features/loans/domain/loan.dart';
 import 'package:gastadoor/features/loans/domain/loan_summary.dart';
 import 'package:gastadoor/features/loans/presentation/loan_detail_screen.dart';
+import 'package:gastadoor/features/loans/presentation/loan_fields.dart';
 import 'package:gastadoor/features/loans/presentation/loan_payment_sheet.dart';
 import 'package:gastadoor/features/loans/presentation/loans_screen.dart';
 
@@ -103,13 +107,30 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Finder field(String label) => find.widgetWithText(TextFormField, label);
+  // The big amount box, and the name box of the Lend form.
+  final amountField = find.descendant(
+    of: find.byType(AmountHeroField),
+    matching: find.byType(TextFormField),
+  );
+  final personField = find.byKey(const Key('loan-person'));
 
-  Future<void> tapButton(WidgetTester tester, String label) async {
-    final button = find.widgetWithText(FilledButton, label);
-    await tester.ensureVisible(button);
+  /// Opens the Lend form from the Loans screen.
+  Future<void> openLendForm(WidgetTester tester) async {
+    await tester.tap(find.byTooltip('Lend money'));
     await tester.pumpAndSettle();
-    await tester.tap(button);
+  }
+
+  /// Opens the account pills (they stay hidden behind one row until then).
+  Future<void> openAccountRow(WidgetTester tester) async {
+    await tester.tap(find.byKey(const Key('account-row')));
+    await tester.pumpAndSettle();
+  }
+
+  /// The form's big button. (The last one is the one on top.)
+  Finder saveButton() => find.byType(FilledButton).last;
+
+  Future<void> tapSave(WidgetTester tester) async {
+    await tester.tap(saveButton());
     await tester.pumpAndSettle();
   }
 
@@ -144,27 +165,56 @@ void main() {
       tester,
     ) async {
       await pump(tester, const LoansScreen());
-      await tester.tap(find.byTooltip('Lend money'));
-      await tester.pumpAndSettle();
+      await openLendForm(tester);
 
-      await tester.enterText(field('Who borrowed it?'), 'Mark');
-      await tester.enterText(field('Amount lent'), '10,000');
+      await tester.enterText(personField, 'Mark');
+      await tester.enterText(amountField, '10,000');
       // The first account is picked until you pick another.
-      await tapButton(tester, 'Lend');
+      await tapSave(tester);
 
       expect(fake.lent, [('Mark', 1000000, 'gotyme')]);
     });
 
+    testWidgets('the account is one row; its pills open when you tap it', (
+      tester,
+    ) async {
+      await pump(tester, const LoansScreen());
+      await openLendForm(tester);
+
+      // Closed: just the row, showing the account that will be used.
+      expect(find.widgetWithText(ChoiceChip, 'Cash'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('account-row')),
+          matching: find.text('GoTyme'),
+        ),
+        findsOneWidget,
+      );
+
+      await openAccountRow(tester);
+      expect(find.widgetWithText(ChoiceChip, 'Cash'), findsOneWidget);
+    });
+
     testWidgets('you can pick a different account', (tester) async {
       await pump(tester, const LoansScreen());
-      await tester.tap(find.byTooltip('Lend money'));
-      await tester.pumpAndSettle();
+      await openLendForm(tester);
 
-      await tester.enterText(field('Who borrowed it?'), 'Mark');
-      await tester.enterText(field('Amount lent'), '500');
+      await tester.enterText(personField, 'Mark');
+      await tester.enterText(amountField, '500');
+      await openAccountRow(tester);
       await tester.tap(find.widgetWithText(ChoiceChip, 'Cash'));
       await tester.pumpAndSettle();
-      await tapButton(tester, 'Lend');
+
+      // Picking closes the pills and the row shows the new account.
+      expect(find.widgetWithText(ChoiceChip, 'Cash'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('account-row')),
+          matching: find.text('Cash'),
+        ),
+        findsOneWidget,
+      );
+      await tapSave(tester);
 
       expect(fake.lent, [('Mark', 50000, 'cash')]);
     });
@@ -173,35 +223,167 @@ void main() {
       tester,
     ) async {
       await pump(tester, const LoansScreen());
-      await tester.tap(find.byTooltip('Lend money'));
+      await openLendForm(tester);
+
+      await tester.enterText(personField, 'Mark');
+      await tester.enterText(amountField, '10000');
+      await tester.tap(find.byType(CupertinoSwitch));
       await tester.pumpAndSettle();
 
-      await tester.enterText(field('Who borrowed it?'), 'Mark');
-      await tester.enterText(field('Amount lent'), '10000');
-      await tester.tap(find.byType(Switch));
-      await tester.pumpAndSettle();
-
-      // The account choices are hidden, and the reason is shown.
-      expect(find.widgetWithText(ChoiceChip, 'GoTyme'), findsNothing);
+      // The account row is hidden, and the reason is shown.
+      expect(find.byKey(const Key('account-row')), findsNothing);
       expect(
         find.textContaining('before you started tracking'),
         findsOneWidget,
       );
 
-      await tapButton(tester, 'Lend');
+      await tapSave(tester);
       expect(fake.lent, [('Mark', 1000000, null)]);
     });
 
     testWidgets('a name and an amount are required', (tester) async {
       await pump(tester, const LoansScreen());
-      await tester.tap(find.byTooltip('Lend money'));
-      await tester.pumpAndSettle();
+      await openLendForm(tester);
 
-      await tapButton(tester, 'Lend');
+      await tapSave(tester);
 
       expect(find.text('Enter a name'), findsOneWidget);
       expect(find.text('Enter an amount'), findsOneWidget);
       expect(fake.lent, isEmpty);
+    });
+
+    testWidgets('the button says what it will do', (tester) async {
+      await pump(tester, const LoansScreen());
+      await openLendForm(tester);
+      expect(find.widgetWithText(FilledButton, 'Lend'), findsOneWidget);
+
+      await tester.enterText(amountField, '500');
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(FilledButton, 'Lend ₱500.00'), findsOneWidget);
+
+      await tester.enterText(personField, 'Mark');
+      await tester.pumpAndSettle();
+      expect(
+        find.widgetWithText(FilledButton, 'Lend ₱500.00 to Mark'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('shows what the account balance will become', (tester) async {
+      await pump(tester, const LoansScreen());
+      await openLendForm(tester);
+
+      await tester.enterText(amountField, '1,000');
+      await tester.pumpAndSettle();
+      expect(find.text('GoTyme: ₱5,000.00 → ₱4,000.00'), findsOneWidget);
+    });
+
+    testWidgets('warns when you lend more than the account has', (
+      tester,
+    ) async {
+      await pump(tester, const LoansScreen());
+      await openLendForm(tester);
+
+      await tester.enterText(amountField, '10,000');
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining("more than GoTyme has (₱5,000.00)"),
+        findsOneWidget,
+      );
+      expect(find.textContaining('turn the switch off'), findsOneWidget);
+    });
+
+    testWidgets('people you lent to before are one tap away', (tester) async {
+      await pump(
+        tester,
+        const LoansScreen(),
+        loans: [
+          LoanWithPayments(loan('a', 'Mark', 1000000), const []),
+          LoanWithPayments(loan('b', 'Ana', 200000), const []),
+        ],
+      );
+      await openLendForm(tester);
+
+      await tester.tap(find.widgetWithText(ActionChip, 'Ana'));
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<TextFormField>(personField).controller!.text, 'Ana');
+    });
+
+    testWidgets('due date shortcuts set the date, and tapping again clears', (
+      tester,
+    ) async {
+      await pump(tester, const LoansScreen());
+      await openLendForm(tester);
+      expect(find.text('None'), findsOneWidget);
+
+      final today = DateTime.now();
+      final inAWeek = DateTime(today.year, today.month, today.day + 7);
+
+      await tester.tap(find.widgetWithText(ChoiceChip, '1 week'));
+      await tester.pumpAndSettle();
+      expect(find.text(friendlyDate(inAWeek)), findsOneWidget);
+      expect(find.text('None'), findsNothing);
+
+      await tester.tap(find.widgetWithText(ChoiceChip, '1 week'));
+      await tester.pumpAndSettle();
+      expect(find.text('None'), findsOneWidget);
+    });
+
+    testWidgets('fits on a narrow 320px phone, with a due date set', (
+      tester,
+    ) async {
+      await pump(tester, const LoansScreen());
+      tester.view.physicalSize = const Size(320, 700);
+      await openLendForm(tester);
+
+      await tester.enterText(amountField, '10,000');
+      await tester.enterText(personField, 'Alexandra Montgomery');
+      await tester.tap(find.widgetWithText(ChoiceChip, 'End of month'));
+      await tester.pumpAndSettle();
+
+      // Flutter fails a test on any overflow, so this must be empty.
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('dates open an iPhone-style wheel with Cancel and Done', (
+      tester,
+    ) async {
+      await pump(tester, const LoansScreen());
+      await openLendForm(tester);
+
+      await tester.tap(find.text('Date lent'));
+      await tester.pumpAndSettle();
+      expect(find.byType(CupertinoDatePicker), findsOneWidget);
+
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      expect(find.byType(CupertinoDatePicker), findsNothing);
+    });
+  });
+
+  group('dueShortcuts', () {
+    test('1 week, 2 weeks and the end of the month', () {
+      expect(dueShortcuts(DateTime(2026, 10, 15)), [
+        ('1 week', DateTime(2026, 10, 22)),
+        ('2 weeks', DateTime(2026, 10, 29)),
+        ('End of month', DateTime(2026, 10, 31)),
+      ]);
+    });
+
+    test('roll over into the next month and year', () {
+      expect(dueShortcuts(DateTime(2026, 12, 20)), [
+        ('1 week', DateTime(2026, 12, 27)),
+        ('2 weeks', DateTime(2027, 1, 3)),
+        ('End of month', DateTime(2026, 12, 31)),
+      ]);
+    });
+
+    test('lent on the last day: the end of month means next month', () {
+      expect(dueShortcuts(DateTime(2026, 10, 31)).last, (
+        'End of month',
+        DateTime(2026, 11, 30),
+      ));
     });
   });
 
@@ -215,10 +397,29 @@ void main() {
     ) async {
       await pump(tester, Scaffold(body: LoanPaymentSheet(loan: owed)));
 
-      await tester.enterText(field('Amount paid back'), '1,000');
-      await tapButton(tester, 'Save repayment');
+      await tester.enterText(amountField, '1,000');
+      await tapSave(tester);
 
       expect(fake.repaid, [('a', 100000, 'gotyme')]);
+    });
+
+    testWidgets('the button and the balance preview follow the amount', (
+      tester,
+    ) async {
+      await pump(tester, Scaffold(body: LoanPaymentSheet(loan: owed)));
+      expect(
+        find.widgetWithText(FilledButton, 'Save repayment'),
+        findsOneWidget,
+      );
+
+      await tester.enterText(amountField, '1,000');
+      await tester.pumpAndSettle();
+      expect(
+        find.widgetWithText(FilledButton, 'Record ₱1,000.00 from Mark'),
+        findsOneWidget,
+      );
+      // Money coming in adds to the balance.
+      expect(find.text('GoTyme: ₱5,000.00 → ₱6,000.00'), findsOneWidget);
     });
 
     testWidgets('starts on the account the money was lent from', (
@@ -230,8 +431,8 @@ void main() {
       );
       await pump(tester, Scaffold(body: LoanPaymentSheet(loan: fromCash)));
 
-      await tester.enterText(field('Amount paid back'), '100');
-      await tapButton(tester, 'Save repayment');
+      await tester.enterText(amountField, '100');
+      await tapSave(tester);
 
       expect(fake.repaid, [('a', 10000, 'cash')]);
     });
@@ -245,8 +446,8 @@ void main() {
       );
       await pump(tester, Scaffold(body: LoanPaymentSheet(loan: fromArchived)));
 
-      await tester.enterText(field('Amount paid back'), '100');
-      await tapButton(tester, 'Save repayment');
+      await tester.enterText(amountField, '100');
+      await tapSave(tester);
 
       expect(fake.repaid, [('a', 10000, 'gotyme')]);
     });
@@ -256,7 +457,7 @@ void main() {
 
       await tester.tap(find.text('Paid in full'));
       await tester.pumpAndSettle();
-      await tapButton(tester, 'Save repayment');
+      await tapSave(tester);
 
       expect(fake.repaid, [('a', 600000, 'gotyme')]);
     });
@@ -264,8 +465,8 @@ void main() {
     testWidgets('you cannot pay back more than what is owed', (tester) async {
       await pump(tester, Scaffold(body: LoanPaymentSheet(loan: owed)));
 
-      await tester.enterText(field('Amount paid back'), '6,000.01');
-      await tapButton(tester, 'Save repayment');
+      await tester.enterText(amountField, '6,000.01');
+      await tapSave(tester);
 
       expect(
         find.textContaining('more than what is still owed (₱6,000.00)'),
@@ -277,10 +478,10 @@ void main() {
     testWidgets('can be recorded without touching an account', (tester) async {
       await pump(tester, Scaffold(body: LoanPaymentSheet(loan: owed)));
 
-      await tester.enterText(field('Amount paid back'), '250');
-      await tester.tap(find.byType(Switch));
+      await tester.enterText(amountField, '250');
+      await tester.tap(find.byType(CupertinoSwitch));
       await tester.pumpAndSettle();
-      await tapButton(tester, 'Save repayment');
+      await tapSave(tester);
 
       expect(fake.repaid, [('a', 25000, null)]);
     });

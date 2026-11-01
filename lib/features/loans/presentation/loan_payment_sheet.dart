@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dates.dart';
 import '../../../core/utils/friendly_error.dart';
 import '../../../core/utils/money.dart';
-import '../../../core/widgets/money_text_field.dart';
+import '../../../core/widgets/amount_hero_field.dart';
 import '../../accounts/data/accounts_provider.dart';
 import '../data/loans_provider.dart';
 import '../domain/loan_summary.dart';
@@ -123,96 +124,132 @@ class _LoanPaymentSheetState extends ConsumerState<LoanPaymentSheet> {
     }
   }
 
+  /// "Save repayment", or once there is an amount: "Record ₱1,000.00 from Mark".
+  String get _buttonLabel {
+    final cents = Money.parseToCents(_amountController.text);
+    if (cents == null || cents <= 0) return 'Save repayment';
+    return 'Record ${Money.format(cents)} from ${widget.loan.loan.person}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final keyboard = MediaQuery.viewInsetsOf(context).bottom;
     final loan = widget.loan;
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(24, 0, 24, 24 + keyboard),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Record repayment', style: theme.textTheme.titleLarge),
-            Text(
-              '${loan.loan.person} still owes '
-              '${Money.format(loan.remainingCents)}',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 20),
-            MoneyTextField(
-              controller: _amountController,
-              label: 'Amount paid back',
-              mustBePositive: true,
-              enabled: !_saving,
-              autofocus: true,
-              large: true,
-            ),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: _saving
-                    ? null
-                    : () => _amountController.text = Money.toInputText(
-                        loan.remainingCents,
+    // The fields scroll; the Save button stays pinned below them.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Record repayment', style: theme.textTheme.titleLarge),
+                  Text(
+                    '${loan.loan.person} still owes '
+                    '${Money.format(loan.remainingCents)}',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Money coming in is green, like income.
+                  AmountHeroField(
+                    controller: _amountController,
+                    color: context.appColors.income,
+                    autofocus: true,
+                    enabled: !_saving,
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      onPressed: _saving
+                          ? null
+                          : () => _amountController.text = Money.toInputText(
+                              loan.remainingCents,
+                            ),
+                      child: const Text('Paid in full'),
+                    ),
+                  ),
+                  // Rebuilds as you type, so the balance preview is live.
+                  ListenableBuilder(
+                    listenable: _amountController,
+                    builder: (context, _) => AccountChoice(
+                      title: 'Put it in an account',
+                      onHelp: 'This amount is added to the account you pick.',
+                      offHelp:
+                          'No account changes. Use this if the money was '
+                          'already counted, or it did not go into any of your '
+                          'accounts.',
+                      useAccount: _useAccount,
+                      accountId: _effectiveAccountId,
+                      amountCents: Money.parseToCents(_amountController.text),
+                      moneyLeaves: false,
+                      enabled: !_saving,
+                      onUseAccountChanged: (v) =>
+                          setState(() => _useAccount = v),
+                      onAccountPicked: (id) => setState(() => _accountId = id),
+                    ),
+                  ),
+                  const LoanSectionLabel('Details'),
+                  LoanGroup(
+                    children: [
+                      LoanDateRow(
+                        label: 'Date paid',
+                        date: _paidOn,
+                        onTap: _saving ? null : _pickDate,
                       ),
-                child: const Text('Paid in full'),
+                      LoanNoteRow(
+                        key: const Key('loan-note'),
+                        controller: _noteController,
+                        enabled: !_saving,
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
-            LoanDateField(
-              label: 'Date paid',
-              date: _paidOn,
-              onTap: _saving ? null : _pickDate,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _noteController,
-              enabled: !_saving,
-              decoration: const InputDecoration(labelText: 'Note (optional)'),
-              maxLength: 500,
-              maxLines: 2,
-              minLines: 1,
-            ),
-            const SizedBox(height: 8),
-            AccountChoice(
-              title: 'Put it in an account',
-              onHelp: 'This amount is added to the account you pick.',
-              offHelp:
-                  'No account changes. Use this if the money was already '
-                  'counted, or it did not go into any of your accounts.',
-              useAccount: _useAccount,
-              accountId: _effectiveAccountId,
-              enabled: !_saving,
-              onUseAccountChanged: (v) => setState(() => _useAccount = v),
-              onAccountPicked: (id) => setState(() => _accountId = id),
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
-            ],
-            const SizedBox(height: 20),
-            FilledButton(
-              onPressed: _saving ? null : _save,
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(52),
-              ),
-              child: _saving
-                  ? const SizedBox.square(
-                      dimension: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2.5),
-                    )
-                  : const Text('Save repayment'),
-            ),
-          ],
+          ),
         ),
-      ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(24, 8, 24, 16 + keyboard),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_error != null) ...[
+                Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
+                const SizedBox(height: 12),
+              ],
+              ListenableBuilder(
+                listenable: _amountController,
+                builder: (context, _) => FilledButton(
+                  onPressed: _saving ? null : _save,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(52),
+                  ),
+                  child: _saving
+                      ? const SizedBox.square(
+                          dimension: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        )
+                      : Text(
+                          _buttonLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

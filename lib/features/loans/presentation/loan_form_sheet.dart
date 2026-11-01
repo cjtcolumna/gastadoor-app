@@ -4,10 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/utils/dates.dart';
 import '../../../core/utils/friendly_error.dart';
 import '../../../core/utils/money.dart';
-import '../../../core/widgets/money_text_field.dart';
+import '../../../core/widgets/amount_hero_field.dart';
 import '../../accounts/data/accounts_provider.dart';
 import '../data/loans_provider.dart';
 import '../domain/loan.dart';
+import '../domain/loan_summary.dart';
 import 'loan_fields.dart';
 
 /// Opens the form to lend money, or to edit [existing] (who, due date, note).
@@ -68,7 +69,13 @@ class _LoanFormSheetState extends ConsumerState<LoanFormSheet> {
 
   Future<void> _pickLentOn() async {
     final picked = await pickLoanDate(context, initial: _lentOn);
-    if (picked != null) setState(() => _lentOn = picked);
+    if (picked == null) return;
+    setState(() {
+      _lentOn = picked;
+      // A due date can't be before the day you lent.
+      final due = _dueOn;
+      if (due != null && due.isBefore(picked)) _dueOn = null;
+    });
   }
 
   Future<void> _pickDueOn() async {
@@ -135,119 +142,187 @@ class _LoanFormSheetState extends ConsumerState<LoanFormSheet> {
     }
   }
 
+  /// "Lend", or once there is an amount and a name: "Lend ₱10,000.00 to Mark".
+  String get _buttonLabel {
+    if (_isEditing) return 'Save';
+    final cents = Money.parseToCents(_amountController.text);
+    if (cents == null || cents <= 0) return 'Lend';
+    final name = _personController.text.trim();
+    final amount = Money.format(cents);
+    return name.isEmpty ? 'Lend $amount' : 'Lend $amount to $name';
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final keyboard = MediaQuery.viewInsetsOf(context).bottom;
     final existing = widget.existing;
+    final recent = [
+      for (final group in groupByPerson(ref.watch(loansProvider).value ?? []))
+        group.person,
+    ].take(6).toList();
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(24, 0, 24, 24 + keyboard),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              _isEditing ? 'Edit loan' : 'Lend money',
-              style: theme.textTheme.titleLarge,
-            ),
-            const SizedBox(height: 20),
-            TextFormField(
-              controller: _personController,
-              enabled: !_saving,
-              decoration: const InputDecoration(
-                labelText: 'Who borrowed it?',
-                hintText: 'e.g. Mark',
+    // The fields scroll; the Lend button stays pinned below them.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    _isEditing ? 'Edit loan' : 'New loan',
+                    style: theme.textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 16),
+                  if (existing == null)
+                    AmountHeroField(
+                      controller: _amountController,
+                      color: theme.colorScheme.onSurface,
+                      autofocus: true,
+                      enabled: !_saving,
+                    ),
+                  const LoanSectionLabel('Who borrowed it?'),
+                  if (existing == null)
+                    RecentBorrowers(
+                      names: recent,
+                      onPick: _saving
+                          ? null
+                          : (name) =>
+                                setState(() => _personController.text = name),
+                    ),
+                  TextFormField(
+                    key: const Key('loan-person'),
+                    controller: _personController,
+                    enabled: !_saving,
+                    decoration: const InputDecoration(
+                      hintText: 'e.g. Mark',
+                      // Hide the "0/80" counter; the limit still applies.
+                      counterText: '',
+                    ),
+                    textCapitalization: TextCapitalization.words,
+                    maxLength: 80,
+                    validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
+                  ),
+                  if (existing == null) ...[
+                    const SizedBox(height: 16),
+                    // Rebuilds as you type, so the balance preview is live.
+                    ListenableBuilder(
+                      listenable: _amountController,
+                      builder: (context, _) => AccountChoice(
+                        title: 'Take it from an account',
+                        onHelp: 'This amount leaves the account you pick.',
+                        offHelp:
+                            'No account changes. Use this for money you lent '
+                            'before you started tracking, when your balance '
+                            'already left it out.',
+                        useAccount: _useAccount,
+                        accountId: _effectiveAccountId,
+                        amountCents: Money.parseToCents(_amountController.text),
+                        enabled: !_saving,
+                        onUseAccountChanged: (v) =>
+                            setState(() => _useAccount = v),
+                        onAccountPicked: (id) =>
+                            setState(() => _accountId = id),
+                      ),
+                    ),
+                  ],
+                  const LoanSectionLabel('Details'),
+                  LoanGroup(
+                    children: [
+                      if (existing != null)
+                        LoanRow(
+                          label: 'Amount lent',
+                          value: Money.format(existing.amountCents),
+                        )
+                      else
+                        LoanDateRow(
+                          label: 'Date lent',
+                          date: _lentOn,
+                          onTap: _saving ? null : _pickLentOn,
+                        ),
+                      LoanDateRow(
+                        label: 'Due date',
+                        date: _dueOn,
+                        emptyText: 'None',
+                        onTap: _saving ? null : _pickDueOn,
+                        onClear: _saving
+                            ? null
+                            : () => setState(() => _dueOn = null),
+                      ),
+                      LoanNoteRow(
+                        key: const Key('loan-note'),
+                        controller: _noteController,
+                        enabled: !_saving,
+                      ),
+                    ],
+                  ),
+                  if (existing != null)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
+                      child: Text(
+                        'To change the amount, delete the loan and add it '
+                        'again.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  const LoanSectionLabel('Due in'),
+                  DueShortcuts(
+                    lentOn: _lentOn,
+                    dueOn: _dueOn,
+                    onChanged: _saving
+                        ? null
+                        : (date) => setState(() => _dueOn = date),
+                  ),
+                ],
               ),
-              textCapitalization: TextCapitalization.words,
-              maxLength: 80,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
             ),
-            const SizedBox(height: 8),
-            if (existing == null)
-              MoneyTextField(
-                controller: _amountController,
-                label: 'Amount lent',
-                mustBePositive: true,
-                enabled: !_saving,
-                autofocus: true,
-                large: true,
-              )
-            else
-              Text(
-                'Amount lent: ${Money.format(existing.amountCents)}  '
-                '(to change it, delete the loan and add it again)',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(24, 8, 24, 16 + keyboard),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_error != null) ...[
+                Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
+                const SizedBox(height: 12),
+              ],
+              ListenableBuilder(
+                listenable: Listenable.merge([
+                  _amountController,
+                  _personController,
+                ]),
+                builder: (context, _) => FilledButton(
+                  onPressed: _saving ? null : _save,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(52),
+                  ),
+                  child: _saving
+                      ? const SizedBox.square(
+                          dimension: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        )
+                      : Text(
+                          _buttonLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                 ),
               ),
-            const SizedBox(height: 16),
-            if (existing == null) ...[
-              LoanDateField(
-                label: 'Date lent',
-                date: _lentOn,
-                onTap: _saving ? null : _pickLentOn,
-              ),
-              const SizedBox(height: 16),
             ],
-            LoanDateField(
-              label: 'Due date (optional)',
-              date: _dueOn,
-              emptyText: 'No due date',
-              onTap: _saving ? null : _pickDueOn,
-              onClear: _saving ? null : () => setState(() => _dueOn = null),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _noteController,
-              enabled: !_saving,
-              decoration: const InputDecoration(
-                labelText: 'Note (optional)',
-                hintText: 'e.g. For his phone repair',
-              ),
-              maxLength: 500,
-              maxLines: 2,
-              minLines: 1,
-            ),
-            if (existing == null) ...[
-              const SizedBox(height: 8),
-              AccountChoice(
-                title: 'Take it from an account',
-                onHelp: 'This amount leaves the account you pick.',
-                offHelp:
-                    'No account changes. Use this for money you lent before '
-                    'you started tracking, when your balance already '
-                    'left it out.',
-                useAccount: _useAccount,
-                accountId: _effectiveAccountId,
-                enabled: !_saving,
-                onUseAccountChanged: (v) => setState(() => _useAccount = v),
-                onAccountPicked: (id) => setState(() => _accountId = id),
-              ),
-            ],
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
-            ],
-            const SizedBox(height: 20),
-            FilledButton(
-              onPressed: _saving ? null : _save,
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(52),
-              ),
-              child: _saving
-                  ? const SizedBox.square(
-                      dimension: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2.5),
-                    )
-                  : Text(_isEditing ? 'Save' : 'Lend'),
-            ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }
