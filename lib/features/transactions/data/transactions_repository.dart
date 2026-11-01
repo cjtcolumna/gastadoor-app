@@ -5,6 +5,8 @@ import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/dates.dart';
 import '../../accounts/data/accounts_provider.dart';
 import '../../accounts/domain/account_groups.dart';
+import '../../budgets/data/budget_cycle_provider.dart';
+import '../../budgets/domain/budget_cycle.dart';
 import '../domain/transaction.dart';
 import '../domain/history_filter.dart';
 import '../domain/month_totals.dart';
@@ -89,6 +91,30 @@ class TransactionsRepository {
     );
   }
 
+  /// The account of the most recently added transaction, or null if there
+  /// are none yet. The add form starts on this account.
+  Future<String?> fetchLastUsedAccountId() async {
+    final rows = await _client
+        .from('transactions')
+        .select('account_id')
+        .order('created_at', ascending: false)
+        .limit(1);
+    return rows.firstOrNull?['account_id'] as String?;
+  }
+
+  /// The category of the most recent [kind] (expense or income) that had
+  /// one, or null. The add form starts on it.
+  Future<String?> fetchLastCategoryId(TransactionKind kind) async {
+    final rows = await _client
+        .from('transactions')
+        .select('category_id')
+        .eq('kind', kind.name)
+        .not('category_id', 'is', null)
+        .order('created_at', ascending: false)
+        .limit(1);
+    return rows.firstOrNull?['category_id'] as String?;
+  }
+
   Future<void> create(TransactionDraft draft) async {
     await _client.from('transactions').insert(draft.toRow());
   }
@@ -122,17 +148,54 @@ final transactionsInMonthProvider =
           .fetchBetween(first, last);
     });
 
+/// The account used by the newest transaction. Read again every time the
+/// add form opens, so it is always up to date.
+final lastUsedAccountIdProvider = FutureProvider.autoDispose<String?>((
+  ref,
+) async {
+  if (!ref.watch(supabaseReadyProvider)) return null;
+  final user = await ref.watch(currentUserProvider.future);
+  if (user == null) return null;
+  return ref.watch(transactionsRepositoryProvider).fetchLastUsedAccountId();
+});
+
+/// The category used by the newest expense (or income, per [kind]).
+final lastCategoryIdProvider = FutureProvider.autoDispose
+    .family<String?, TransactionKind>((ref, kind) async {
+      if (!ref.watch(supabaseReadyProvider)) return null;
+      final user = await ref.watch(currentUserProvider.future);
+      if (user == null) return null;
+      return ref
+          .watch(transactionsRepositoryProvider)
+          .fetchLastCategoryId(kind);
+    });
+
 /// The first day of the current month.
 DateTime thisMonth() {
   final now = DateTime.now();
   return DateTime(now.year, now.month);
 }
 
-/// This month's transactions. Shared by the month totals on Home, budgets,
-/// and the spending chart, so they're only loaded once.
-final monthTransactionsProvider = FutureProvider<List<Transaction>>(
-  (ref) => ref.watch(transactionsInMonthProvider(thisMonth()).future),
-);
+/// Every transaction between two days of a budget period (both included).
+final transactionsInPeriodProvider =
+    FutureProvider.family<List<Transaction>, BudgetPeriod>((ref, period) async {
+      if (!ref.watch(supabaseReadyProvider)) return const [];
+      final user = await ref.watch(currentUserProvider.future);
+      if (user == null) return const [];
+      return ref
+          .watch(transactionsRepositoryProvider)
+          .fetchBetween(period.start, period.end);
+    });
+
+/// The transactions of the current budget period (the calendar month unless
+/// the user chose another cycle in Settings). Shared by the totals on Home,
+/// budgets, and the spending chart, so they're only loaded once.
+final monthTransactionsProvider = FutureProvider<List<Transaction>>((
+  ref,
+) async {
+  final period = await ref.watch(currentPeriodProvider.future);
+  return ref.watch(transactionsInPeriodProvider(period).future);
+});
 
 /// Income and spending for each of the last 6 months (oldest first),
 /// loaded in one request.

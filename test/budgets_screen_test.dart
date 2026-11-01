@@ -165,7 +165,32 @@ void main() {
 
     expect(chip('Food'), findsNothing);
     expect(chip('Transport'), findsOneWidget);
-    expect(chip('All spending'), findsOneWidget);
+  });
+
+  testWidgets('a new budget cannot be "All spending"', (tester) async {
+    await pumpScreen(tester);
+    await tester.tap(find.byTooltip('Add budget'));
+    await tester.pumpAndSettle();
+
+    expect(chip('All spending'), findsNothing);
+    expect(chip('Food'), findsOneWidget);
+    expect(chip('Transport'), findsOneWidget);
+  });
+
+  testWidgets('an old "All spending" budget can still be edited', (
+    tester,
+  ) async {
+    await pumpScreen(tester, budgets: [budget('b2', null, 2000000)]);
+    await tester.tap(find.text('All spending'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit budget'), findsOneWidget);
+    expect(chip('All spending'), findsOneWidget); // shown, selected
+    await tester.enterText(find.byType(TextFormField), '25000');
+    await tester.tap(saveButton());
+    await tester.pumpAndSettle();
+    expect(fake.saved.single.amountCents, 2500000);
+    expect(fake.saved.single.categoryId, isNull);
   });
 
   testWidgets('tap a budget to change or delete it', (tester) async {

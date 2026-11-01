@@ -47,6 +47,27 @@ List<Account> inGroupOrder(List<Account> accounts) => [
   for (final group in groupAccounts(accounts)) ...group.members,
 ];
 
+/// The account a new transaction starts on: the one used last
+/// ([lastUsedId]), or the first of [accounts] when that one is missing
+/// (never used, archived, or deleted). Null when there are no accounts.
+String? defaultAccountId(List<Account> accounts, String? lastUsedId) {
+  if (lastUsedId != null && accounts.any((a) => a.id == lastUsedId)) {
+    return lastUsedId;
+  }
+  return accounts.firstOrNull?.id;
+}
+
+/// The text on a main account's pill inside a card. It is just the name,
+/// unless one of its sub-accounts has the same name ("GoTyme" > "GoTyme"),
+/// where "(main)" tells the two apart.
+String mainPillLabel(AccountGroup group) {
+  final name = group.account.name;
+  final clash = group.children.any(
+    (c) => c.name.trim().toLowerCase() == name.trim().toLowerCase(),
+  );
+  return clash ? '$name (main)' : name;
+}
+
 /// The name to show for [account]: "GoTyme › Travel" for a sub-account
 /// (when its parent is in [all]), or just "GoTyme".
 String accountLabel(Account account, List<Account> all) {

@@ -16,6 +16,10 @@ abstract class Category with _$Category {
     String? color,
     String? parentId,
     @Default(false) bool archived,
+
+    /// True for the one Salary category every user has. It is needed for
+    /// the budget cycle, so it can't be archived or deleted.
+    @Default(false) bool isSalary,
   }) = _Category;
 
   factory Category.fromJson(Map<String, dynamic> json) =>

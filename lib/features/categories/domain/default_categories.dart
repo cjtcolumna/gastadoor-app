@@ -9,6 +9,11 @@ typedef DefaultCategory = ({
   String color,
 });
 
+extension DefaultCategoryX on DefaultCategory {
+  /// The starter income category called "Salary" is the protected one.
+  bool get isSalary => kind == TransactionKind.income && name == 'Salary';
+}
+
 const defaultCategories = <DefaultCategory>[
   (
     name: 'Food',
