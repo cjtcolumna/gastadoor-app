@@ -641,16 +641,18 @@ void main() {
     expect(border().color.a, 1);
   });
 
-  testWidgets('the amount is not colored by type', (tester) async {
+  testWidgets('the amount is red for expense, green for income, blue for '
+      'transfer', (tester) async {
     await openSheet(tester);
+    final colors = tester.element(find.byType(AmountHeroField)).appColors;
     Color amountColor() =>
         tester.widget<AmountHeroField>(find.byType(AmountHeroField)).color;
 
-    final expense = amountColor();
+    expect(amountColor(), colors.expense);
     await tapVisible(tester, find.text('Income'));
-    expect(amountColor(), expense);
+    expect(amountColor(), colors.income);
     await tapVisible(tester, find.text('Transfer'));
-    expect(amountColor(), expense);
+    expect(amountColor(), colors.transfer);
   });
 
   testWidgets('starts on the category used last time', (tester) async {

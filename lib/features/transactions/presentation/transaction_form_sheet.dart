@@ -283,7 +283,13 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
                   const SizedBox(height: 16),
                   AmountHeroField(
                     controller: _amountController,
-                    color: theme.colorScheme.onSurface,
+                    // Red for expense, green for income, blue for transfer
+                    // (the same colors as the switch above).
+                    color: switch (_kind) {
+                      TransactionKind.expense => context.appColors.expense,
+                      TransactionKind.income => context.appColors.income,
+                      TransactionKind.transfer => context.appColors.transfer,
+                    },
                     autofocus: !_isEditing,
                     enabled: !_saving,
                   ),
