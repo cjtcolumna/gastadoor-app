@@ -32,6 +32,11 @@ class BudgetUsage {
   double get barFraction =>
       limitCents == 0 ? 0 : (spentCents / limitCents).clamp(0.0, 1.0);
 
+  /// How much of the limit is used, as a whole number (it can pass 100).
+  /// It rounds down, so "75%" only shows once you really are at 75%, which
+  /// is where [status] turns amber.
+  int get percentUsed => limitCents == 0 ? 0 : spentCents * 100 ~/ limitCents;
+
   /// Uses whole-number math (no decimals) so 75% is exact:
   /// spent / limit >= 3/4  is the same as  spent * 4 >= limit * 3.
   BudgetStatus get status {

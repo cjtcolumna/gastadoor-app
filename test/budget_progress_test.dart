@@ -107,6 +107,19 @@ void main() {
       expect(spent(5000).barFraction, 0.5);
       expect(spent(25000).barFraction, 1.0);
     });
+
+    test('percent used is a whole number that rounds down', () {
+      expect(spent(0).percentUsed, 0);
+      expect(spent(4760).percentUsed, 47);
+      expect(spent(7499).percentUsed, 74); // not 75 yet: still green
+      expect(spent(7500).percentUsed, 75); // amber starts here
+      expect(spent(10000).percentUsed, 100);
+      expect(spent(11800).percentUsed, 118); // it can go past 100
+    });
+
+    test('percent used is 0 when there is no limit', () {
+      expect(const BudgetUsage(limitCents: 0, spentCents: 500).percentUsed, 0);
+    });
   });
 
   group('the total over all limits', () {

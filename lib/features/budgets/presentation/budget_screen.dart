@@ -237,9 +237,7 @@ class _RingCard extends StatelessWidget {
               spacing: 6,
               children: [
                 Text(
-                  isOver
-                      ? '${Money.format(totals.overCents)} over'
-                      : '${Money.format(totals.leftCents)} left',
+                  budgetLeftText(totals),
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: isOver ? statusColor : null,

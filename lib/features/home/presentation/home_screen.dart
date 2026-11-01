@@ -13,11 +13,9 @@ import '../../accounts/domain/account_groups.dart';
 import '../../accounts/domain/balances.dart';
 import '../../accounts/presentation/account_balance_tile.dart';
 import '../../budgets/data/budget_cycle_provider.dart';
-import '../../budgets/data/budgets_provider.dart';
 import '../../budgets/domain/budget_cycle.dart';
-import '../../budgets/presentation/budget_progress_tile.dart';
+import '../../budgets/presentation/budget_home_card.dart';
 import '../../categories/data/categories_repository.dart';
-import '../../categories/presentation/category_form_sheet.dart';
 import '../../loans/presentation/loans_home_card.dart';
 import '../../transactions/data/transactions_repository.dart';
 import '../../insights/presentation/spending_breakdown_card.dart';
@@ -62,10 +60,10 @@ class HomeScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             const _MonthSummary(),
             const SizedBox(height: 28),
-            // Where the money went comes first, then how budgets are doing.
+            // Where the money went comes first, then how the budget is doing.
             const _SpendingSection(),
             const SizedBox(height: 28),
-            const _BudgetsSection(),
+            const BudgetHomeSection(),
             const SizedBox(height: 28),
             const LoansHomeSection(),
             const SizedBox(height: 28),
@@ -233,61 +231,6 @@ class _SummaryTile extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-/// "Budgets" heading with a Manage link, then a progress bar per category
-/// that has a monthly limit.
-class _BudgetsSection extends ConsumerWidget {
-  const _BudgetsSection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final progressAsync = ref.watch(budgetProgressProvider);
-    final progress = progressAsync.value ?? const [];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(left: 4),
-                child: Text('Budgets', style: theme.textTheme.titleMedium),
-              ),
-            ),
-            TextButton(
-              onPressed: () => context.go('/budget'),
-              child: const Text('Manage'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        // Not loaded yet is different from "no budgets": don't invite
-        // someone to add a budget they already have.
-        if (!progressAsync.hasValue && progressAsync.hasError)
-          ErrorView.inline(
-            error: progressAsync.error!,
-            title: "Couldn't load your budgets",
-            onRetry: () {
-              ref.invalidate(categoriesProvider);
-              ref.invalidate(monthTransactionsProvider);
-            },
-          )
-        else if (!progressAsync.hasValue)
-          const SkeletonListCard(rows: 2)
-        else if (progress.isEmpty)
-          NoBudgetsCard(onSetUp: () => context.go('/budget'))
-        else
-          BudgetsCard(
-            items: progress,
-            // A limit is part of its category, so tapping opens the category.
-            onTap: (p) => showCategoryFormSheet(context, existing: p.category),
-          ),
-      ],
     );
   }
 }

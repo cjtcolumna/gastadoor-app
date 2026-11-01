@@ -15,6 +15,11 @@ Color budgetStatusColor(BuildContext context, BudgetStatus status) {
   };
 }
 
+/// "₱1,240.00 left", or "₱320.00 over" once the limit is passed.
+String budgetLeftText(BudgetUsage usage) => usage.status == BudgetStatus.over
+    ? '${Money.format(usage.overCents)} over'
+    : '${Money.format(usage.leftCents)} left';
+
 /// One category's budget: icon, name, "₱3,760.00 of ₱5,000.00", what's left
 /// (or over), and a colored progress bar.
 class BudgetProgressTile extends StatelessWidget {
@@ -29,9 +34,6 @@ class BudgetProgressTile extends StatelessWidget {
     final category = progress.category;
     final statusColor = budgetStatusColor(context, progress.status);
     final isOver = progress.status == BudgetStatus.over;
-    final remaining = isOver
-        ? '${Money.format(progress.overCents)} over'
-        : '${Money.format(progress.leftCents)} left';
 
     return InkWell(
       onTap: onTap,
@@ -70,7 +72,7 @@ class BudgetProgressTile extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerRight,
                     child: Text(
-                      remaining,
+                      budgetLeftText(progress),
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         // Red when over; otherwise a calm grey.
@@ -95,32 +97,6 @@ class BudgetProgressTile extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// A white card listing several budgets with thin lines between them.
-class BudgetsCard extends StatelessWidget {
-  const BudgetsCard({super.key, required this.items, this.onTap});
-
-  final List<BudgetProgress> items;
-  final void Function(BudgetProgress)? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          for (final (i, p) in items.indexed) ...[
-            if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16),
-            BudgetProgressTile(
-              progress: p,
-              onTap: onTap == null ? null : () => onTap!(p),
-            ),
-          ],
-        ],
       ),
     );
   }

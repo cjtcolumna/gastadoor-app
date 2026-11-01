@@ -109,13 +109,13 @@ void main() {
     expect(find.byType(BudgetScreen), findsOneWidget);
     expect(find.textContaining('No limits yet'), findsOneWidget);
 
-    // Back to Home, then the "Manage" link next to "Budgets".
+    // Back to Home, then the "Manage" link next to "Budget".
     GoRouter.of(tester.element(find.byType(BudgetScreen))).pop();
     await tester.pumpAndSettle();
     expect(find.byType(BudgetScreen), findsNothing);
     await tester.tap(
       find.descendant(
-        of: find.ancestor(of: find.text('Budgets'), matching: find.byType(Row)),
+        of: find.ancestor(of: find.text('Budget'), matching: find.byType(Row)),
         matching: find.text('Manage'),
       ),
     );
