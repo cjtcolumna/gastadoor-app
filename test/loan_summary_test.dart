@@ -89,6 +89,34 @@ void main() {
     });
   });
 
+  group('overdue count', () {
+    test('counts only loans past their due date and not paid back', () {
+      final loans = [
+        LoanWithPayments(
+          loan('a', 'Mark', 1000, dueOn: DateTime(2026, 10, 5)),
+          const [],
+        ), // overdue
+        LoanWithPayments(loan('b', 'Ana', 1000, dueOn: DateTime(2026, 10, 5)), [
+          pay('b', 1000),
+        ]), // paid back, so not overdue
+        LoanWithPayments(
+          loan('c', 'Leo', 1000, dueOn: DateTime(2026, 11, 20)),
+          const [],
+        ), // not due yet
+        LoanWithPayments(loan('d', 'Zed', 1000), const []), // no due date
+        LoanWithPayments(
+          loan('e', 'Kim', 1000, dueOn: DateTime(2026, 10, 20)),
+          [pay('e', 100)],
+        ), // partly paid but still overdue
+      ];
+      expect(overdueCount(loans, today: today), 2);
+    });
+
+    test('is 0 for no loans', () {
+      expect(overdueCount(const [], today: today), 0);
+    });
+  });
+
   group('status words', () {
     LoanWithPayments make(DateTime? due, [List<LoanPayment> p = const []]) =>
         LoanWithPayments(loan('a', 'Mark', 1000, dueOn: due), p);

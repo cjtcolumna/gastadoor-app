@@ -51,6 +51,13 @@ class PersonLoans {
 int totalOwedCents(List<LoanWithPayments> loans) =>
     loans.fold(0, (sum, l) => sum + l.remainingCents);
 
+/// How many loans are overdue: past their due date and not paid back yet.
+/// [today] can be passed in so tests don't depend on the real clock.
+int overdueCount(List<LoanWithPayments> loans, {DateTime? today}) {
+  final now = today ?? DateTime.now();
+  return loans.where((l) => l.statusOn(now) == LoanStatus.overdue).length;
+}
+
 /// Groups loans by borrower ("Mark" and "mark " are the same person).
 /// People who still owe you come first, the one who owes most on top;
 /// people who paid everything back come last.

@@ -10,13 +10,13 @@ import '../../../core/widgets/screen_padding.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../accounts/data/accounts_provider.dart';
 import '../../accounts/domain/account_groups.dart';
-import '../../accounts/domain/balances.dart';
 import '../../accounts/presentation/account_balance_tile.dart';
 import '../../budgets/data/budget_cycle_provider.dart';
 import '../../budgets/domain/budget_cycle.dart';
 import '../../budgets/presentation/budget_home_card.dart';
 import '../../categories/data/categories_repository.dart';
 import '../../loans/presentation/loans_home_card.dart';
+import 'net_worth_card.dart';
 import '../../transactions/data/transactions_repository.dart';
 import '../../insights/presentation/spending_breakdown_card.dart';
 import '../../transactions/domain/month_totals.dart';
@@ -56,7 +56,7 @@ class HomeScreen extends ConsumerWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: screenPadding(context),
           children: [
-            const _NetWorthCard(),
+            const NetWorthCard(),
             const SizedBox(height: 12),
             const _MonthSummary(),
             const SizedBox(height: 28),
@@ -74,64 +74,6 @@ class HomeScreen extends ConsumerWidget {
             ],
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// The green card at the top with your net worth.
-class _NetWorthCard extends ConsumerWidget {
-  const _NetWorthCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final accounts = ref.watch(accountsProvider).value ?? const [];
-    final balances = ref.watch(accountBalancesProvider).value ?? const {};
-    final netWorth = netWorthCents(accounts, balances);
-    const onCard = Colors.white;
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF256B4D), Color(0xFF3A9B6F)],
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Net worth',
-            style: theme.textTheme.titleSmall?.copyWith(
-              color: onCard.withValues(alpha: 0.8),
-            ),
-          ),
-          const SizedBox(height: 6),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              Money.format(netWorth),
-              style: theme.textTheme.displaySmall?.copyWith(
-                color: onCard,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -1,
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Across ${accounts.length} '
-            '${accounts.length == 1 ? 'account' : 'accounts'}',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: onCard.withValues(alpha: 0.8),
-            ),
-          ),
-        ],
       ),
     );
   }
