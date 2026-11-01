@@ -19,6 +19,7 @@ import '../../budgets/presentation/budget_form_sheet.dart';
 import '../../budgets/presentation/budget_progress_tile.dart';
 import '../../budgets/presentation/budgets_screen.dart';
 import '../../categories/data/categories_repository.dart';
+import '../../loans/presentation/loans_home_card.dart';
 import '../../transactions/data/transactions_repository.dart';
 import '../../insights/presentation/spending_breakdown_card.dart';
 import '../../transactions/domain/month_totals.dart';
@@ -66,6 +67,8 @@ class HomeScreen extends ConsumerWidget {
             const _SpendingSection(),
             const SizedBox(height: 28),
             const _BudgetsSection(),
+            const SizedBox(height: 28),
+            const LoansHomeSection(),
             const SizedBox(height: 28),
             const _AccountsSection(),
             if (!supabaseReady) ...[

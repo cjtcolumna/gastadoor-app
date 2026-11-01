@@ -9,6 +9,8 @@ import '../../features/budgets/presentation/budgets_screen.dart';
 import '../../features/categories/presentation/categories_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/insights/presentation/insights_screen.dart';
+import '../../features/loans/presentation/loan_detail_screen.dart';
+import '../../features/loans/presentation/loans_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/transactions/presentation/history_screen.dart';
 import '../supabase/supabase_providers.dart';
@@ -63,6 +65,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     path: 'budgets',
                     name: 'budgets',
                     builder: (context, state) => const BudgetsScreen(),
+                  ),
+                  // Opened from Home's Loans section. `/loans/:id` is one loan.
+                  GoRoute(
+                    path: 'loans',
+                    name: 'loans',
+                    builder: (context, state) => const LoansScreen(),
+                    routes: [
+                      GoRoute(
+                        path: ':id',
+                        name: 'loan',
+                        builder: (context, state) => LoanDetailScreen(
+                          loanId: state.pathParameters['id']!,
+                        ),
+                      ),
+                    ],
                   ),
                   // Opened from the Categories icon on Home.
                   GoRoute(
