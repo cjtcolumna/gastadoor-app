@@ -174,7 +174,10 @@ class LoanTile extends StatelessWidget {
     };
 
     return ListTile(
-      onTap: () => context.go('/loans/${loan.loan.id}'),
+      // Loans can be opened from Home (/loans) or More (/more/loans), so add
+      // the loan's id to whichever address this screen is on.
+      onTap: () =>
+          context.go('${GoRouterState.of(context).uri.path}/${loan.loan.id}'),
       title: Text(
         loan.isPaid
             ? Money.format(loan.loan.amountCents)

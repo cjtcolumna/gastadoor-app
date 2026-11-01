@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/config/app_info.dart';
@@ -9,12 +8,10 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/money.dart';
 import '../../../core/widgets/screen_padding.dart';
 import '../../auth/data/auth_repository.dart';
-import '../../budgets/data/budget_cycle_provider.dart';
-import '../../budgets/domain/budget_cycle.dart';
-import '../../budgets/presentation/budget_cycle_sheet.dart';
 import 'change_password_sheet.dart';
 
-/// Profile, shortcuts, password, app info, and sign out.
+/// Profile, password, app info, and sign out. (The things you manage, like
+/// budgets and loans, are in the More tab.)
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -46,8 +43,6 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider).value;
-    final cycle =
-        ref.watch(budgetCycleProvider).value ?? BudgetCycle.calendarMonth;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -55,32 +50,6 @@ class SettingsScreen extends ConsumerWidget {
         padding: screenPadding(context),
         children: [
           _ProfileCard(email: user?.email, createdAt: user?.createdAt),
-          const _Heading('Manage'),
-          _Group(
-            children: [
-              _Row(
-                icon: Icons.category_rounded,
-                label: 'Categories',
-                onTap: () => context.go('/categories'),
-              ),
-              _Row(
-                icon: Icons.savings_rounded,
-                label: 'Budgets',
-                onTap: () => context.go('/budgets'),
-              ),
-              _Row(
-                icon: Icons.event_repeat_rounded,
-                label: 'Budget cycle',
-                subtitle: cycle.summary,
-                onTap: () => showBudgetCycleSheet(context),
-              ),
-              _Row(
-                icon: Icons.account_balance_wallet_rounded,
-                label: 'Accounts',
-                onTap: () => context.go('/accounts'),
-              ),
-            ],
-          ),
           const _Heading('Security'),
           _Group(
             children: [
@@ -232,16 +201,12 @@ class _Row extends StatelessWidget {
     required this.icon,
     required this.label,
     this.value,
-    this.subtitle,
     this.onTap,
     this.danger = false,
   });
 
   final IconData icon;
   final String label;
-
-  /// A small line under the label (for example the current choice).
-  final String? subtitle;
 
   /// Shown on the right instead of an arrow (for read-only rows).
   final String? value;
@@ -260,7 +225,6 @@ class _Row extends StatelessWidget {
         label,
         style: TextStyle(color: color, fontWeight: FontWeight.w600),
       ),
-      subtitle: subtitle == null ? null : Text(subtitle!),
       trailing: value != null
           ? Text(
               value!,

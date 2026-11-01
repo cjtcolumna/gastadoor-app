@@ -6,7 +6,7 @@ import '../../../core/utils/friendly_error.dart';
 import '../data/budget_cycle_provider.dart';
 import '../domain/budget_cycle.dart';
 
-/// Opens the "Budget cycle" form from Settings.
+/// Opens the "Budget cycle" form from the Budgets screen.
 Future<void> showBudgetCycleSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,

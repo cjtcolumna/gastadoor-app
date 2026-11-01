@@ -9,6 +9,7 @@ import '../../transactions/data/transactions_repository.dart';
 import '../data/budget_cycle_provider.dart';
 import '../data/budgets_provider.dart';
 import '../domain/budget_cycle.dart';
+import 'budget_cycle_sheet.dart';
 import 'budget_form_sheet.dart';
 import 'budget_progress_tile.dart';
 
@@ -60,6 +61,8 @@ class BudgetsScreen extends ConsumerWidget {
                 categoriesById: byId,
                 onTap: (p) => showBudgetFormSheet(context, existing: p.budget),
               ),
+            const SizedBox(height: 20),
+            const _BudgetCycleTile(),
           ],
         ),
         loading: () => const SkeletonPage(cards: 1),
@@ -71,6 +74,34 @@ class BudgetsScreen extends ConsumerWidget {
             ref.invalidate(monthTransactionsProvider);
           },
         ),
+      ),
+    );
+  }
+}
+
+/// "Budget cycle" row: shows when budgets start over, and opens the form
+/// to change it.
+class _BudgetCycleTile extends ConsumerWidget {
+  const _BudgetCycleTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cycle =
+        ref.watch(budgetCycleProvider).value ?? BudgetCycle.calendarMonth;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        leading: Icon(
+          Icons.event_repeat_rounded,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        title: const Text(
+          'Budget cycle',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Text(cycle.summary),
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: () => showBudgetCycleSheet(context),
       ),
     );
   }

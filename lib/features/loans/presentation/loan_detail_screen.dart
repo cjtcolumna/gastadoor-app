@@ -67,7 +67,10 @@ class LoanDetailScreen extends ConsumerWidget {
     if (!sure || !context.mounted) return;
     try {
       await ref.read(loansProvider.notifier).remove(loanId);
-      if (context.mounted) context.go('/loans');
+      // Back to the list, in whichever tab it was opened from.
+      if (context.mounted) {
+        context.canPop() ? context.pop() : context.go('/loans');
+      }
     } catch (e) {
       if (context.mounted) _showError(context, e);
     }

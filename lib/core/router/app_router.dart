@@ -11,6 +11,7 @@ import '../../features/home/presentation/home_screen.dart';
 import '../../features/insights/presentation/insights_screen.dart';
 import '../../features/loans/presentation/loan_detail_screen.dart';
 import '../../features/loans/presentation/loans_screen.dart';
+import '../../features/more/presentation/more_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/transactions/presentation/history_screen.dart';
 import '../supabase/supabase_providers.dart';
@@ -47,7 +48,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'login',
         builder: (context, state) => const LoginScreen(),
       ),
-      // The three tabs. Each "branch" is one tab with its own history,
+      // The four tabs. Each "branch" is one tab with its own history,
       // so switching tabs keeps your place (e.g. the History page number).
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
@@ -67,26 +68,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     builder: (context, state) => const BudgetsScreen(),
                   ),
                   // Opened from Home's Loans section. `/loans/:id` is one loan.
-                  GoRoute(
-                    path: 'loans',
-                    name: 'loans',
-                    builder: (context, state) => const LoansScreen(),
-                    routes: [
-                      GoRoute(
-                        path: ':id',
-                        name: 'loan',
-                        builder: (context, state) => LoanDetailScreen(
-                          loanId: state.pathParameters['id']!,
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Opened from the Categories icon on Home.
-                  GoRoute(
-                    path: 'categories',
-                    name: 'categories',
-                    builder: (context, state) => const CategoriesScreen(),
-                  ),
+                  _loansRoute(),
                   // Opened from Home's Spending section.
                   GoRoute(
                     path: 'insights',
@@ -132,8 +114,50 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
+          // The More tab: a menu. Its screens live under /more, so opening
+          // one from here keeps you in this tab with a back arrow to the
+          // menu. (Home has its own /budgets and /loans for its "Manage"
+          // links, so those keep you on Home.)
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/more',
+                name: 'more',
+                builder: (context, state) => const MoreScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'budgets',
+                    name: 'more-budgets',
+                    builder: (context, state) => const BudgetsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'categories',
+                    name: 'more-categories',
+                    builder: (context, state) => const CategoriesScreen(),
+                  ),
+                  _loansRoute(namePrefix: 'more-'),
+                ],
+              ),
+            ],
+          ),
         ],
       ),
     ],
   );
 });
+
+/// The Loans list and, inside it, one loan (`:id`). Used under both Home
+/// and More, so the same screens work from either tab.
+GoRoute _loansRoute({String namePrefix = ''}) => GoRoute(
+  path: 'loans',
+  name: '${namePrefix}loans',
+  builder: (context, state) => const LoansScreen(),
+  routes: [
+    GoRoute(
+      path: ':id',
+      name: '${namePrefix}loan',
+      builder: (context, state) =>
+          LoanDetailScreen(loanId: state.pathParameters['id']!),
+    ),
+  ],
+);
