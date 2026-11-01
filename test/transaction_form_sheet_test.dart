@@ -870,7 +870,7 @@ void main() {
         userId: 'u',
         name: 'Fun',
         kind: TransactionKind.expense,
-        icon: 'movie',
+        icon: 'pets',
         color: 'pink',
       ),
       Category(

@@ -556,13 +556,13 @@ void main() {
       expect(inForm(find.byType(KindSwitch)), findsNothing);
 
       await tester.enterText(nameField(), 'Meals');
-      await tapVisible(tester, find.bySemanticsLabel('groceries'));
+      await tapVisible(tester, find.bySemanticsLabel('fitness'));
       await tapVisible(tester, save());
 
       final c = actions.saved.single;
       expect(c.id, 'food');
       expect(c.name, 'Meals');
-      expect(c.icon, 'groceries');
+      expect(c.icon, 'fitness');
       expect(c.color, 'orange'); // unchanged
       expect(c.kind, TransactionKind.expense);
       expect(c.budgetCents, 500000); // the limit is untouched
