@@ -221,6 +221,36 @@ void main() {
       expect(fake.repaid, [('a', 100000, 'gotyme')]);
     });
 
+    testWidgets('starts on the account the money was lent from', (
+      tester,
+    ) async {
+      final fromCash = LoanWithPayments(
+        loan('a', 'Mark', 1000000, accountId: 'cash'),
+        const [],
+      );
+      await pump(tester, Scaffold(body: LoanPaymentSheet(loan: fromCash)));
+
+      await tester.enterText(field('Amount paid back'), '100');
+      await tapButton(tester, 'Save repayment');
+
+      expect(fake.repaid, [('a', 10000, 'cash')]);
+    });
+
+    testWidgets('falls back to the first account if that one is gone', (
+      tester,
+    ) async {
+      final fromArchived = LoanWithPayments(
+        loan('a', 'Mark', 1000000, accountId: 'old-archived'),
+        const [],
+      );
+      await pump(tester, Scaffold(body: LoanPaymentSheet(loan: fromArchived)));
+
+      await tester.enterText(field('Amount paid back'), '100');
+      await tapButton(tester, 'Save repayment');
+
+      expect(fake.repaid, [('a', 10000, 'gotyme')]);
+    });
+
     testWidgets('"Paid in full" fills in what is left', (tester) async {
       await pump(tester, Scaffold(body: LoanPaymentSheet(loan: owed)));
 

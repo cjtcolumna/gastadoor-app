@@ -54,8 +54,18 @@ class _LoanPaymentSheetState extends ConsumerState<LoanPaymentSheet> {
     super.dispose();
   }
 
-  String? get _effectiveAccountId =>
-      _accountId ?? ref.read(accountsProvider).value?.firstOrNull?.id;
+  /// The account you picked. Until then: the account the loan was taken
+  /// from (money usually goes back where it came from), or else the first
+  /// account. An archived account can't be picked, so it is skipped.
+  String? get _effectiveAccountId {
+    if (_accountId != null) return _accountId;
+    final accounts = ref.read(accountsProvider).value ?? const [];
+    final lentFrom = widget.loan.loan.accountId;
+    if (lentFrom != null && accounts.any((a) => a.id == lentFrom)) {
+      return lentFrom;
+    }
+    return accounts.firstOrNull?.id;
+  }
 
   Future<void> _pickDate() async {
     final picked = await pickLoanDate(
