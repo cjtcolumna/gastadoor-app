@@ -12,7 +12,7 @@ declare
   acct uuid;
   cat_ids uuid[];
   names text[] := array['Food', 'Transport', 'Bills', 'Shopping', 'Coffee'];
-  icons text[] := array['restaurant', 'bus', 'receipt', 'shopping', 'cafe'];
+  icons text[] := array['restaurant', 'bus', 'receipt', 'groceries', 'cafe'];
   colors text[] := array['orange', 'blue', 'amber', 'pink', 'brown'];
   notes text[] := array['Jollibee', 'Grab', 'Meralco', 'Shopee', 'Starbucks'];
   i int;

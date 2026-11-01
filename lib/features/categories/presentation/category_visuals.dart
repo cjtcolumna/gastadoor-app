@@ -8,8 +8,10 @@ import 'package:flutter/material.dart';
 ///
 /// Taking a name out of this map is safe: a category that already saved it
 /// shows the plain tag icon (see [categoryIconFor]) until you pick another.
+/// To give it a replacement instead, list it in [retiredIconNames].
 const categoryIcons = <String, IconData>{
   'restaurant': Icons.restaurant_rounded,
+  'groceries': Icons.local_grocery_store_rounded,
   'cafe': Icons.local_cafe_rounded,
   'bus': Icons.directions_bus_rounded,
   'car': Icons.directions_car_rounded,
@@ -17,7 +19,6 @@ const categoryIcons = <String, IconData>{
   'receipt': Icons.receipt_long_rounded,
   'home': Icons.home_rounded,
   'phone': Icons.phone_iphone_rounded,
-  'shopping': Icons.shopping_bag_rounded,
   // Flutter's built-in icons have no lipstick, so this is the face with
   // sparkles, the usual "beauty" icon. The saved name stays 'lipstick', so a
   // real lipstick drawing can replace it here later without touching data.
@@ -49,9 +50,22 @@ const categoryColors = <String, Color>{
   'brown': Color(0xFF6D4C41),
 };
 
+/// Icon names that are no longer offered, mapped to the icon that now takes
+/// their place. Categories that saved the old name show the new icon (and
+/// save the new name the next time they are edited), so nothing has to be
+/// changed in the database.
+const retiredIconNames = <String, String>{
+  // The shopping bag was removed; the grocery cart is its replacement.
+  'shopping': 'groceries',
+};
+
+/// The name to use for a saved icon name: a retired one is swapped for its
+/// replacement, anything else comes back as it was.
+String? currentIconName(String? saved) => retiredIconNames[saved] ?? saved;
+
 /// The icon for a saved name. Unknown names (or old emojis) get a tag icon.
 IconData categoryIconFor(String? name) =>
-    categoryIcons[name] ?? Icons.label_outline_rounded;
+    categoryIcons[currentIconName(name)] ?? Icons.label_outline_rounded;
 
 /// The color for a saved name, or the app's main color if there's none.
 Color categoryColorFor(String? name, ColorScheme scheme) =>

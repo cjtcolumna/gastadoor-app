@@ -49,12 +49,13 @@ Category expenseCategory(
   String name, {
   int? limit,
   bool archived = false,
+  String icon = 'restaurant',
 }) => Category(
   id: id,
   userId: 'u',
   name: name,
   kind: TransactionKind.expense,
-  icon: 'restaurant',
+  icon: icon,
   color: 'orange',
   budgetCents: limit,
   archived: archived,
@@ -566,6 +567,19 @@ void main() {
       expect(c.color, 'orange'); // unchanged
       expect(c.kind, TransactionKind.expense);
       expect(c.budgetCents, 500000); // the limit is untouched
+    });
+
+    testWidgets('a category with the old shopping bag edits as the cart', (
+      tester,
+    ) async {
+      await pumpScreen(
+        tester,
+        categories: [expenseCategory('shop', 'Shopping', icon: 'shopping')],
+      );
+      await tapVisible(tester, find.text('Shopping'));
+      await tapVisible(tester, save());
+      // Saving moves it to the cart's name, so the old one fades away.
+      expect(actions.saved.single.icon, 'groceries');
     });
 
     testWidgets('archiving asks first', (tester) async {

@@ -51,7 +51,11 @@ class _CategoryFormSheetState extends ConsumerState<CategoryFormSheet> {
         : Money.toInputText(widget.existing!.budgetCents!),
   );
   late TransactionKind _kind = widget.existing?.kind ?? widget.initialKind;
-  late String _icon = _known(widget.existing?.icon, categoryIcons, 'category');
+  late String _icon = _known(
+    currentIconName(widget.existing?.icon),
+    categoryIcons,
+    'category',
+  );
   late String _color = _known(widget.existing?.color, categoryColors, 'blue');
   bool _saving = false;
   String? _error;

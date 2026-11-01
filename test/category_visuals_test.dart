@@ -23,15 +23,36 @@ void main() {
     expect(categoryIconFor('lipstick'), Icons.face_retouching_natural_rounded);
   });
 
-  test('the grocery, school and movie icons are no longer offered', () {
-    for (final removed in ['groceries', 'school', 'movie']) {
+  test('the shopping bag, school and movie icons are no longer offered', () {
+    for (final removed in ['shopping', 'school', 'movie']) {
       expect(categoryIcons, isNot(contains(removed)), reason: removed);
     }
   });
 
-  test('a category that saved a removed icon shows the tag icon', () {
+  test('the grocery cart is offered', () {
+    expect(categoryIcons, contains('groceries'));
+    expect(categoryIconFor('groceries'), Icons.local_grocery_store_rounded);
+  });
+
+  test('a category that saved the old shopping bag shows the cart', () {
+    expect(categoryIconFor('shopping'), Icons.local_grocery_store_rounded);
+    expect(currentIconName('shopping'), 'groceries');
+  });
+
+  test('other names are left as they are', () {
+    expect(currentIconName('restaurant'), 'restaurant');
+    expect(currentIconName('movie'), 'movie');
+    expect(currentIconName(null), isNull);
+  });
+
+  test('the starter Shopping category uses the cart', () {
+    final shopping = defaultCategories.firstWhere((c) => c.name == 'Shopping');
+    expect(shopping.icon, 'groceries');
+  });
+
+  test('a category that saved another removed icon shows the tag icon', () {
     // Nothing breaks: it just looks plain until you pick a new icon.
-    for (final removed in ['groceries', 'school', 'movie']) {
+    for (final removed in ['school', 'movie']) {
       expect(categoryIconFor(removed), Icons.label_outline_rounded);
     }
   });
