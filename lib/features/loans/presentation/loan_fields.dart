@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,6 +7,7 @@ import '../../../core/utils/money.dart';
 import '../../accounts/data/accounts_provider.dart';
 import '../../accounts/domain/account.dart';
 import '../../accounts/domain/account_groups.dart';
+import '../../accounts/presentation/account_avatar.dart';
 import '../../accounts/presentation/account_picker_cards.dart';
 
 /// A small grey heading above a part of the form (same look as the one in
@@ -82,103 +82,29 @@ class LoanDateButton extends StatelessWidget {
   }
 }
 
-/// Opens an iPhone-style date wheel at the bottom of the screen and returns
-/// the day picked (or null if cancelled).
+/// Opens the calendar (the same one the Add transaction form uses) and
+/// returns the day picked, or null if cancelled.
 Future<DateTime?> pickLoanDate(
   BuildContext context, {
   required DateTime initial,
   DateTime? firstDate,
-}) {
+}) async {
   final first = dateOnly(firstDate ?? DateTime(2000));
-  final last = dateOnly(DateTime.now().add(const Duration(days: 365 * 5)));
+  final last = DateTime.now().add(const Duration(days: 365 * 5));
+  // The calendar needs the starting day to be inside its range.
   var start = dateOnly(initial);
   if (start.isBefore(first)) start = first;
-  if (start.isAfter(last)) start = last;
+  if (start.isAfter(last)) start = dateOnly(last);
 
-  return showCupertinoModalPopup<DateTime>(
+  final picked = await showDatePicker(
     context: context,
-    builder: (_) => _DateWheelSheet(initial: start, first: first, last: last),
+    initialDate: start,
+    firstDate: first,
+    lastDate: last,
+    // Calendar only: hides the pencil "type a date" button.
+    initialEntryMode: DatePickerEntryMode.calendarOnly,
   );
-}
-
-class _DateWheelSheet extends StatefulWidget {
-  const _DateWheelSheet({
-    required this.initial,
-    required this.first,
-    required this.last,
-  });
-
-  final DateTime initial;
-  final DateTime first;
-  final DateTime last;
-
-  @override
-  State<_DateWheelSheet> createState() => _DateWheelSheetState();
-}
-
-class _DateWheelSheetState extends State<_DateWheelSheet> {
-  late DateTime _chosen = widget.initial;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Row(
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(_chosen),
-                    child: const Text(
-                      'Done',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(
-              height: 216,
-              // The wheel uses the app's font and colors, not iOS's default.
-              child: CupertinoTheme(
-                data: CupertinoThemeData(
-                  textTheme: CupertinoTextThemeData(
-                    dateTimePickerTextStyle: theme.textTheme.titleLarge
-                        ?.copyWith(
-                          fontSize: 21,
-                          fontWeight: FontWeight.w500,
-                          color: theme.colorScheme.onSurface,
-                        ),
-                  ),
-                ),
-                child: CupertinoDatePicker(
-                  mode: CupertinoDatePickerMode.date,
-                  initialDateTime: widget.initial,
-                  minimumDate: widget.first,
-                  maximumDate: widget.last,
-                  onDateTimeChanged: (d) => _chosen = dateOnly(d),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  return picked == null ? null : dateOnly(picked);
 }
 
 /// The ready-made due dates offered under the due date: a label and the day.
@@ -261,15 +187,16 @@ class RecentBorrowers extends StatelessWidget {
 /// "Should this change an account?" for a loan or a repayment.
 ///
 /// - A heading ([title]) with a switch on its right.
-/// - Switch on: the same account pills as the Add transaction form, to pick
-///   the account the money leaves (or goes into). Under them, what the
-///   balance becomes.
+/// - Switch on: one box shows the account that will be used (and its
+///   balance). Tap it and the account pills, the same ones as in the Add
+///   transaction form, slide open; tap a pill and they close again. Under
+///   it, what the balance becomes.
 /// - Switch off: no account changes. This is for money that moved before you
 ///   started tracking, when the starting balance already counted it.
 ///
 /// The screen owns the state ([useAccount], [accountId]); this widget only
-/// shows it and reports taps.
-class AccountChoice extends ConsumerWidget {
+/// shows it and reports taps. Whether the pills are open is its own business.
+class AccountChoice extends ConsumerStatefulWidget {
   const AccountChoice({
     super.key,
     required this.title,
@@ -303,10 +230,18 @@ class AccountChoice extends ConsumerWidget {
   final bool enabled;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AccountChoice> createState() => _AccountChoiceState();
+}
+
+class _AccountChoiceState extends ConsumerState<AccountChoice> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final w = widget;
     final accounts = ref.watch(accountsProvider).value ?? const <Account>[];
     final balances = ref.watch(accountBalancesProvider).value;
-    final selected = accounts.where((a) => a.id == accountId).firstOrNull;
+    final selected = accounts.where((a) => a.id == w.accountId).firstOrNull;
     final theme = Theme.of(context);
 
     return Column(
@@ -319,27 +254,48 @@ class AccountChoice extends ConsumerWidget {
             children: [
               Expanded(
                 child: Text(
-                  title,
+                  w.title,
                   style: theme.textTheme.labelLarge?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
-              CupertinoSwitch(
-                value: useAccount,
-                activeTrackColor: theme.colorScheme.primary,
-                onChanged: enabled ? onUseAccountChanged : null,
+              Switch(
+                value: w.useAccount,
+                onChanged: w.enabled ? w.onUseAccountChanged : null,
               ),
             ],
           ),
         ),
-        if (useAccount) ...[
+        if (w.useAccount) ...[
           const SizedBox(height: 8),
-          AccountPickerCards(
-            accounts: accounts,
-            selectedId: accountId,
-            balances: balances,
-            onChanged: enabled ? onAccountPicked : null,
+          _AccountBox(
+            account: selected,
+            name: selected == null ? null : accountLabel(selected, accounts),
+            balanceCents: selected == null ? null : balances?[selected.id],
+            open: _open,
+            onTap: w.enabled ? () => setState(() => _open = !_open) : null,
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            alignment: Alignment.topCenter,
+            child: _open
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: AccountPickerCards(
+                      accounts: accounts,
+                      selectedId: w.accountId,
+                      balances: balances,
+                      onChanged: w.enabled
+                          ? (id) {
+                              setState(() => _open = false);
+                              w.onAccountPicked(id);
+                            }
+                          : null,
+                    ),
+                  )
+                : const SizedBox(width: double.infinity),
           ),
         ],
         const SizedBox(height: 8),
@@ -348,7 +304,7 @@ class AccountChoice extends ConsumerWidget {
     );
   }
 
-  /// The small line under the pills: what the switch does, or (with an
+  /// The small line under the account: what the switch does, or (with an
   /// amount and an account) what the balance becomes.
   Widget _help(
     BuildContext context,
@@ -356,22 +312,23 @@ class AccountChoice extends ConsumerWidget {
     List<Account> accounts,
     Map<String, int>? balances,
   ) {
+    final w = widget;
     final theme = Theme.of(context);
     final grey = theme.textTheme.bodySmall?.copyWith(
       color: theme.colorScheme.onSurfaceVariant,
     );
 
-    if (!useAccount) return Text(offHelp, style: grey);
+    if (!w.useAccount) return Text(w.offHelp, style: grey);
 
     final balance = selected == null ? null : balances?[selected.id];
-    final amount = amountCents;
+    final amount = w.amountCents;
     if (selected == null || balance == null || amount == null || amount <= 0) {
-      return Text(onHelp, style: grey);
+      return Text(w.onHelp, style: grey);
     }
 
     final name = accountLabel(selected, accounts);
-    final after = moneyLeaves ? balance - amount : balance + amount;
-    if (moneyLeaves && after < 0) {
+    final after = w.moneyLeaves ? balance - amount : balance + amount;
+    if (w.moneyLeaves && after < 0) {
       return Text(
         "That's more than $name has (${Money.format(balance)}). If you lent "
         'it before you started tracking, turn the switch off.',
@@ -383,6 +340,71 @@ class AccountChoice extends ConsumerWidget {
     return Text(
       '$name: ${Money.format(balance)} → ${Money.format(after)}',
       style: grey,
+    );
+  }
+}
+
+/// The closed account picker: an outlined box with the account's picture,
+/// its name, its balance, and an arrow that points down (closed) or up (open).
+class _AccountBox extends StatelessWidget {
+  const _AccountBox({
+    required this.account,
+    required this.name,
+    required this.balanceCents,
+    required this.open,
+    required this.onTap,
+  });
+
+  final Account? account;
+  final String? name;
+  final int? balanceCents;
+  final bool open;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final grey = theme.colorScheme.onSurfaceVariant;
+    final cents = balanceCents;
+
+    return OutlinedButton(
+      key: const Key('account-row'),
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(52),
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+      ),
+      child: Row(
+        children: [
+          if (account != null) ...[
+            AccountAvatar(account: account!, size: 24),
+            const SizedBox(width: 10),
+          ],
+          Expanded(
+            child: Text(
+              name ?? 'Choose an account',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (cents != null) ...[
+            const SizedBox(width: 8),
+            Text(
+              Money.format(cents),
+              maxLines: 1,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: cents < 0 ? context.appColors.expense : grey,
+              ),
+            ),
+          ],
+          const SizedBox(width: 4),
+          Icon(
+            open ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+            color: grey,
+          ),
+        ],
+      ),
     );
   }
 }

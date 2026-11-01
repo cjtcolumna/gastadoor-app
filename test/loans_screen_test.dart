@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -120,6 +119,18 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Opens the account pills (they stay hidden behind one box until then).
+  Future<void> openAccountRow(WidgetTester tester) async {
+    await tester.tap(find.byKey(const Key('account-row')));
+    await tester.pumpAndSettle();
+  }
+
+  /// Finds [text] inside the closed account box.
+  Finder inAccountBox(String text) => find.descendant(
+    of: find.byKey(const Key('account-row')),
+    matching: find.text(text),
+  );
+
   /// The form's big button. (The last one is the one on top.)
   Finder saveButton() => find.byType(FilledButton).last;
 
@@ -169,16 +180,22 @@ void main() {
       expect(fake.lent, [('Mark', 1000000, 'gotyme')]);
     });
 
-    testWidgets('the account pills are shown, the first one picked', (
+    testWidgets('the account is one box; its pills open when you tap it', (
       tester,
     ) async {
       await pump(tester, const LoansScreen());
       await openLendForm(tester);
 
-      final gotyme = find.widgetWithText(ChoiceChip, 'GoTyme');
-      final cash = find.widgetWithText(ChoiceChip, 'Cash');
-      expect(tester.widget<ChoiceChip>(gotyme).selected, isTrue);
-      expect(tester.widget<ChoiceChip>(cash).selected, isFalse);
+      // Closed: the account that will be used, and its balance.
+      expect(find.widgetWithText(ChoiceChip, 'Cash'), findsNothing);
+      expect(inAccountBox('GoTyme'), findsOneWidget);
+      expect(inAccountBox('₱5,000.00'), findsOneWidget);
+
+      await openAccountRow(tester);
+      expect(find.widgetWithText(ChoiceChip, 'Cash'), findsOneWidget);
+      // Tapping the box again closes them.
+      await openAccountRow(tester);
+      expect(find.widgetWithText(ChoiceChip, 'Cash'), findsNothing);
     });
 
     testWidgets('you can pick a different account', (tester) async {
@@ -187,15 +204,13 @@ void main() {
 
       await tester.enterText(personField, 'Mark');
       await tester.enterText(amountField, '500');
+      await openAccountRow(tester);
       await tester.tap(find.widgetWithText(ChoiceChip, 'Cash'));
       await tester.pumpAndSettle();
 
-      expect(
-        tester
-            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Cash'))
-            .selected,
-        isTrue,
-      );
+      // Picking closes the pills and the box shows the new account.
+      expect(find.widgetWithText(ChoiceChip, 'Cash'), findsNothing);
+      expect(inAccountBox('Cash'), findsOneWidget);
       await tapSave(tester);
 
       expect(fake.lent, [('Mark', 50000, 'cash')]);
@@ -209,11 +224,11 @@ void main() {
 
       await tester.enterText(personField, 'Mark');
       await tester.enterText(amountField, '10000');
-      await tester.tap(find.byType(CupertinoSwitch));
+      await tester.tap(find.byType(Switch));
       await tester.pumpAndSettle();
 
-      // The account pills are hidden, and the reason is shown.
-      expect(find.widgetWithText(ChoiceChip, 'GoTyme'), findsNothing);
+      // The account box is hidden, and the reason is shown.
+      expect(find.byKey(const Key('account-row')), findsNothing);
       expect(
         find.textContaining('before you started tracking'),
         findsOneWidget,
@@ -328,26 +343,35 @@ void main() {
 
       await tester.enterText(amountField, '10,000');
       await tester.enterText(personField, 'Alexandra Montgomery');
-      await tester.tap(find.widgetWithText(ChoiceChip, 'End of month'));
+      final endOfMonth = find.widgetWithText(ChoiceChip, 'End of month');
+      await tester.ensureVisible(endOfMonth);
       await tester.pumpAndSettle();
+      await tester.tap(endOfMonth);
+      await tester.pumpAndSettle();
+      expect(find.text('No due date'), findsNothing);
 
       // Flutter fails a test on any overflow, so this must be empty.
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('dates open an iPhone-style wheel with Cancel and Done', (
+    testWidgets('dates open the same calendar as Add transaction', (
       tester,
     ) async {
       await pump(tester, const LoansScreen());
       await openLendForm(tester);
+      expect(find.text('No due date'), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('date-lent')));
+      await tester.tap(find.byKey(const Key('date-due')));
       await tester.pumpAndSettle();
-      expect(find.byType(CupertinoDatePicker), findsOneWidget);
+      expect(find.byType(DatePickerDialog), findsOneWidget);
 
-      await tester.tap(find.text('Done'));
+      // It starts on the day lent (today). Confirm it: the due date is today.
+      await tester.tap(find.text('OK'));
       await tester.pumpAndSettle();
-      expect(find.byType(CupertinoDatePicker), findsNothing);
+      expect(find.byType(DatePickerDialog), findsNothing);
+      expect(find.text('No due date'), findsNothing);
+      // Date lent and due date now both show today.
+      expect(find.text(fullDate(DateTime.now())), findsNWidgets(2));
     });
   });
 
@@ -468,7 +492,7 @@ void main() {
       await pump(tester, Scaffold(body: LoanPaymentSheet(loan: owed)));
 
       await tester.enterText(amountField, '250');
-      await tester.tap(find.byType(CupertinoSwitch));
+      await tester.tap(find.byType(Switch));
       await tester.pumpAndSettle();
       await tapSave(tester);
 
