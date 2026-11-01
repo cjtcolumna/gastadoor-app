@@ -10,7 +10,6 @@ import 'package:gastadoor/features/accounts/data/accounts_provider.dart';
 import 'package:gastadoor/features/accounts/domain/account.dart';
 import 'package:gastadoor/features/accounts/presentation/account_picker_cards.dart';
 import 'package:gastadoor/features/budgets/data/budgets_provider.dart';
-import 'package:gastadoor/features/budgets/domain/budget.dart';
 import 'package:gastadoor/features/budgets/domain/budget_progress.dart';
 import 'package:gastadoor/features/categories/data/categories_repository.dart';
 import 'package:gastadoor/features/categories/presentation/category_pill.dart';
@@ -734,14 +733,8 @@ void main() {
 
   BudgetProgress foodBudget({required int spent, required int limit}) =>
       BudgetProgress(
-        budget: Budget(
-          id: 'b1',
-          userId: 'u',
-          categoryId: 'food',
-          name: 'Food',
-          amountCents: limit,
-          startsOn: DateTime(2026, 10, 1),
-        ),
+        category: categories.first.copyWith(budgetCents: limit),
+        limitCents: limit,
         spentCents: spent,
       );
 

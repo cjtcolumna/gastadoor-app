@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/money.dart';
-import '../../categories/domain/category.dart';
 import '../../categories/presentation/category_visuals.dart';
 import '../domain/budget_progress.dart';
 
@@ -16,33 +15,18 @@ Color budgetStatusColor(BuildContext context, BudgetStatus status) {
   };
 }
 
-/// The budget's title: its category's name, "All spending", or (if the
-/// category was archived, so it's not in the active list) the saved name.
-String budgetTitle(BudgetProgress progress, Category? category) {
-  if (category != null) return category.name;
-  if (progress.budget.categoryId == null) return 'All spending';
-  return progress.budget.name;
-}
-
-/// One budget: icon, name, "₱3,760.00 of ₱5,000.00", what's left (or over),
-/// and a colored progress bar.
+/// One category's budget: icon, name, "₱3,760.00 of ₱5,000.00", what's left
+/// (or over), and a colored progress bar.
 class BudgetProgressTile extends StatelessWidget {
-  const BudgetProgressTile({
-    super.key,
-    required this.progress,
-    required this.category,
-    this.onTap,
-  });
+  const BudgetProgressTile({super.key, required this.progress, this.onTap});
 
   final BudgetProgress progress;
-
-  /// The budget's category, or null for an "all spending" budget.
-  final Category? category;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final category = progress.category;
     final statusColor = budgetStatusColor(context, progress.status);
     final isOver = progress.status == BudgetStatus.over;
     final remaining = isOver
@@ -58,17 +42,14 @@ class BudgetProgressTile extends StatelessWidget {
           children: [
             Row(
               children: [
-                _BudgetAvatar(
-                  category: category,
-                  allSpending: progress.budget.categoryId == null,
-                ),
+                CategoryAvatar(icon: category.icon, color: category.color),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        budgetTitle(progress, category),
+                        category.name,
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       Text(
@@ -81,14 +62,23 @@ class BudgetProgressTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                Text(
-                  remaining,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    // Red when over; otherwise a calm grey.
-                    color: isOver
-                        ? statusColor
-                        : theme.colorScheme.onSurfaceVariant,
+                // A huge amount shrinks a little instead of pushing the row
+                // off a narrow screen.
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 140),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      remaining,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        // Red when over; otherwise a calm grey.
+                        color: isOver
+                            ? statusColor
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -110,38 +100,11 @@ class BudgetProgressTile extends StatelessWidget {
   }
 }
 
-class _BudgetAvatar extends StatelessWidget {
-  const _BudgetAvatar({required this.category, required this.allSpending});
-
-  final Category? category;
-  final bool allSpending;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = category;
-    if (c != null) return CategoryAvatar(icon: c.icon, color: c.color);
-    // A budget whose category was archived: plain tag icon.
-    if (!allSpending) return const CategoryAvatar(icon: null, color: null);
-    // "All spending" gets a wallet in the app's green.
-    return CircleAvatar(
-      backgroundColor: context.appColors.incomeSoft,
-      foregroundColor: Theme.of(context).colorScheme.primary,
-      child: const Icon(Icons.account_balance_wallet_rounded, size: 20),
-    );
-  }
-}
-
 /// A white card listing several budgets with thin lines between them.
 class BudgetsCard extends StatelessWidget {
-  const BudgetsCard({
-    super.key,
-    required this.items,
-    required this.categoriesById,
-    this.onTap,
-  });
+  const BudgetsCard({super.key, required this.items, this.onTap});
 
   final List<BudgetProgress> items;
-  final Map<String, Category> categoriesById;
   final void Function(BudgetProgress)? onTap;
 
   @override
@@ -154,11 +117,53 @@ class BudgetsCard extends StatelessWidget {
             if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16),
             BudgetProgressTile(
               progress: p,
-              category: categoriesById[p.budget.categoryId],
               onTap: onTap == null ? null : () => onTap!(p),
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// Shown when no category has a limit yet. With [onSetUp] it also has a
+/// button (Home uses it to open the Budget page).
+class NoBudgetsCard extends StatelessWidget {
+  const NoBudgetsCard({
+    super.key,
+    this.message =
+        'Set a monthly limit on Food, Transport, or any category, and watch '
+        'how close you are.',
+    this.onSetUp,
+  });
+
+  final String message;
+  final VoidCallback? onSetUp;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Icon(
+              Icons.savings_rounded,
+              size: 36,
+              color: theme.colorScheme.primary,
+            ),
+            const SizedBox(height: 8),
+            Text(message, textAlign: TextAlign.center),
+            if (onSetUp != null) ...[
+              const SizedBox(height: 12),
+              FilledButton.tonal(
+                onPressed: onSetUp,
+                child: const Text('Set a limit'),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

@@ -5,8 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/accounts/presentation/account_detail_screen.dart';
 import '../../features/accounts/presentation/accounts_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
-import '../../features/budgets/presentation/budgets_screen.dart';
-import '../../features/categories/presentation/categories_screen.dart';
+import '../../features/budgets/presentation/budget_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/insights/presentation/insights_screen.dart';
 import '../../features/loans/presentation/loan_detail_screen.dart';
@@ -63,9 +62,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 routes: [
                   // Opened from Home's "Manage" link; gets a back arrow.
                   GoRoute(
-                    path: 'budgets',
-                    name: 'budgets',
-                    builder: (context, state) => const BudgetsScreen(),
+                    path: 'budget',
+                    name: 'budget',
+                    builder: (context, state) => const BudgetScreen(),
                   ),
                   // Opened from Home's Loans section. `/loans/:id` is one loan.
                   _loansRoute(),
@@ -116,7 +115,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           // The More tab: a menu. Its screens live under /more, so opening
           // one from here keeps you in this tab with a back arrow to the
-          // menu. (Home has its own /budgets and /loans for its "Manage"
+          // menu. (Home has its own /budget and /loans for its "Manage"
           // links, so those keep you on Home.)
           StatefulShellBranch(
             routes: [
@@ -126,14 +125,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) => const MoreScreen(),
                 routes: [
                   GoRoute(
-                    path: 'budgets',
-                    name: 'more-budgets',
-                    builder: (context, state) => const BudgetsScreen(),
-                  ),
-                  GoRoute(
-                    path: 'categories',
-                    name: 'more-categories',
-                    builder: (context, state) => const CategoriesScreen(),
+                    path: 'budget',
+                    name: 'more-budget',
+                    builder: (context, state) => const BudgetScreen(),
                   ),
                   _loansRoute(namePrefix: 'more-'),
                 ],

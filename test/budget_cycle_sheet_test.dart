@@ -3,19 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gastadoor/core/theme/app_theme.dart';
 import 'package:gastadoor/features/budgets/data/budget_cycle_provider.dart';
-import 'package:gastadoor/features/budgets/data/budgets_provider.dart';
-import 'package:gastadoor/features/budgets/domain/budget.dart';
 import 'package:gastadoor/features/budgets/domain/budget_cycle.dart';
-import 'package:gastadoor/features/budgets/presentation/budgets_screen.dart';
+import 'package:gastadoor/features/budgets/presentation/budget_screen.dart';
 import 'package:gastadoor/features/categories/data/categories_repository.dart';
 import 'package:gastadoor/features/transactions/data/transactions_repository.dart';
 import 'package:gastadoor/features/transactions/domain/transaction.dart';
-
-/// Keeps budgets in memory instead of Supabase.
-class _NoBudgets extends BudgetsNotifier {
-  @override
-  Future<List<Budget>> build() async => const [];
-}
 
 /// Remembers the cycle that was saved instead of calling Supabase.
 class FakeCycle extends BudgetCycleNotifier {
@@ -31,7 +23,7 @@ class FakeCycle extends BudgetCycleNotifier {
   }
 }
 
-/// The "Budget cycle" row on the Budgets screen and its form.
+/// The "Budget cycle" row on the Budget page and its form.
 void main() {
   late FakeCycle cycle;
 
@@ -47,7 +39,6 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          budgetsProvider.overrideWith(_NoBudgets.new),
           monthTransactionsProvider.overrideWith(
             (ref) async => const <Transaction>[],
           ),
@@ -55,10 +46,7 @@ void main() {
           budgetCycleProvider.overrideWith(() => cycle),
           salaryDatesProvider.overrideWith((ref) async => salaryDates),
         ],
-        child: MaterialApp(
-          theme: AppTheme.light(),
-          home: const BudgetsScreen(),
-        ),
+        child: MaterialApp(theme: AppTheme.light(), home: const BudgetScreen()),
       ),
     );
     await tester.pumpAndSettle();

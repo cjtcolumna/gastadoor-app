@@ -60,17 +60,21 @@ class CategoriesRepository {
     required TransactionKind kind,
     required String icon,
     required String color,
+    int? budgetCents,
   }) async {
     await _client.from('categories').insert({
       'name': name.trim(),
       'kind': kind.name,
       'icon': icon,
       'color': color,
+      // Left out when there is no limit, so the database default (none) is used.
+      'budget_cents': ?budgetCents,
     });
   }
 
-  /// Changes name, icon, and color. The kind (expense/income) never changes,
-  /// so old transactions always stay in a matching category.
+  /// Changes name, icon, color, and monthly limit. The kind (expense/income)
+  /// never changes, so old transactions always stay in a matching category.
+  /// A null [Category.budgetCents] removes the limit.
   Future<void> update(Category category) async {
     await _client
         .from('categories')
@@ -78,6 +82,7 @@ class CategoriesRepository {
           'name': category.name.trim(),
           'icon': category.icon,
           'color': category.color,
+          'budget_cents': category.budgetCents,
         })
         .eq('id', category.id);
   }
@@ -127,8 +132,15 @@ class CategoryActions {
     required TransactionKind kind,
     required String icon,
     required String color,
+    int? budgetCents,
   }) async {
-    await _repo.create(name: name, kind: kind, icon: icon, color: color);
+    await _repo.create(
+      name: name,
+      kind: kind,
+      icon: icon,
+      color: color,
+      budgetCents: budgetCents,
+    );
     _refresh();
   }
 
@@ -148,6 +160,7 @@ class CategoryActions {
   }
 
   void _refresh() {
+    // Limits live on the categories, so the budget bars follow from this too.
     _ref.invalidate(categoriesProvider);
     _ref.invalidate(archivedCategoriesProvider);
     // History rows show category names and icons.

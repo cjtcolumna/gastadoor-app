@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gastadoor/app.dart';
+import 'package:gastadoor/features/budgets/presentation/budget_screen.dart';
+import 'package:go_router/go_router.dart';
 
 void main() {
   testWidgets(
@@ -17,10 +19,10 @@ void main() {
       expect(find.text('₱0.00'), findsNWidgets(4));
       expect(find.textContaining('Income ·'), findsOneWidget);
       expect(find.textContaining('Spent ·'), findsOneWidget);
-      // No budgets yet, so Home invites you to add one. It sits below
+      // No limits yet, so Home invites you to set one. It sits below
       // the spending chart, so scroll down to it.
-      await tester.scrollUntilVisible(find.text('Add a budget'), 300);
-      expect(find.text('Add a budget'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Set a limit'), 300);
+      expect(find.text('Set a limit'), findsOneWidget);
       // The setup note is at the bottom, so scroll down to it.
       await tester.scrollUntilVisible(
         find.text('Supabase is not configured'),
@@ -89,7 +91,35 @@ void main() {
     await tester.pumpAndSettle();
 
     final spending = tester.getTopLeft(find.text('Where your money went'));
-    final budgets = tester.getTopLeft(find.text('Add a budget'));
+    final budgets = tester.getTopLeft(find.text('Set a limit'));
     expect(spending.dy, lessThan(budgets.dy));
+  });
+
+  testWidgets('"Set a limit" and "Manage" open the Budget page', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(const ProviderScope(child: GastaDoorApp()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Set a limit'));
+    await tester.pumpAndSettle();
+    expect(find.byType(BudgetScreen), findsOneWidget);
+    expect(find.textContaining('No limits yet'), findsOneWidget);
+
+    // Back to Home, then the "Manage" link next to "Budgets".
+    GoRouter.of(tester.element(find.byType(BudgetScreen))).pop();
+    await tester.pumpAndSettle();
+    expect(find.byType(BudgetScreen), findsNothing);
+    await tester.tap(
+      find.descendant(
+        of: find.ancestor(of: find.text('Budgets'), matching: find.byType(Row)),
+        matching: find.text('Manage'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(BudgetScreen), findsOneWidget);
   });
 }

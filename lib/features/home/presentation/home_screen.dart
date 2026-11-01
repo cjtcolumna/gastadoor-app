@@ -15,10 +15,9 @@ import '../../accounts/presentation/account_balance_tile.dart';
 import '../../budgets/data/budget_cycle_provider.dart';
 import '../../budgets/data/budgets_provider.dart';
 import '../../budgets/domain/budget_cycle.dart';
-import '../../budgets/presentation/budget_form_sheet.dart';
 import '../../budgets/presentation/budget_progress_tile.dart';
-import '../../budgets/presentation/budgets_screen.dart';
 import '../../categories/data/categories_repository.dart';
+import '../../categories/presentation/category_form_sheet.dart';
 import '../../loans/presentation/loans_home_card.dart';
 import '../../transactions/data/transactions_repository.dart';
 import '../../insights/presentation/spending_breakdown_card.dart';
@@ -238,8 +237,8 @@ class _SummaryTile extends StatelessWidget {
   }
 }
 
-/// "Accounts" heading with a Manage link, then a row per account.
-/// "Budgets" heading with a Manage link, then a progress bar per budget.
+/// "Budgets" heading with a Manage link, then a progress bar per category
+/// that has a monthly limit.
 class _BudgetsSection extends ConsumerWidget {
   const _BudgetsSection();
 
@@ -248,8 +247,6 @@ class _BudgetsSection extends ConsumerWidget {
     final theme = Theme.of(context);
     final progressAsync = ref.watch(budgetProgressProvider);
     final progress = progressAsync.value ?? const [];
-    final categories = ref.watch(categoriesProvider).value ?? const [];
-    final byId = {for (final c in categories) c.id: c};
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -263,7 +260,7 @@ class _BudgetsSection extends ConsumerWidget {
               ),
             ),
             TextButton(
-              onPressed: () => context.go('/budgets'),
+              onPressed: () => context.go('/budget'),
               child: const Text('Manage'),
             ),
           ],
@@ -276,19 +273,19 @@ class _BudgetsSection extends ConsumerWidget {
             error: progressAsync.error!,
             title: "Couldn't load your budgets",
             onRetry: () {
-              ref.invalidate(budgetsProvider);
+              ref.invalidate(categoriesProvider);
               ref.invalidate(monthTransactionsProvider);
             },
           )
         else if (!progressAsync.hasValue)
           const SkeletonListCard(rows: 2)
         else if (progress.isEmpty)
-          const NoBudgetsCard()
+          NoBudgetsCard(onSetUp: () => context.go('/budget'))
         else
           BudgetsCard(
             items: progress,
-            categoriesById: byId,
-            onTap: (p) => showBudgetFormSheet(context, existing: p.budget),
+            // A limit is part of its category, so tapping opens the category.
+            onTap: (p) => showCategoryFormSheet(context, existing: p.category),
           ),
       ],
     );

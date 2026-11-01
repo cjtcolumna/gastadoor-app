@@ -1,5 +1,5 @@
+import '../../categories/domain/category.dart';
 import '../../transactions/domain/transaction.dart';
-import 'budget.dart';
 
 /// How a budget is doing: fine, getting close, or over the limit.
 enum BudgetStatus {
@@ -13,29 +13,14 @@ enum BudgetStatus {
   over,
 }
 
-/// A budget plus how much has been spent against it this month.
-class BudgetProgress {
-  const BudgetProgress({required this.budget, required this.spentCents});
+/// A limit and how much of it is spent. The math (left, over, the bar, the
+/// status) lives here once, and is shared by one category's budget and by the
+/// total over all of them.
+class BudgetUsage {
+  const BudgetUsage({required this.limitCents, required this.spentCents});
 
-  /// Adds up this month's expenses that count toward [budget]:
-  /// every expense for an "all spending" budget, or only expenses in the
-  /// budget's category. Income and transfers never count.
-  factory BudgetProgress.compute(Budget budget, List<Transaction> month) {
-    var spent = 0;
-    for (final t in month) {
-      if (t.kind != TransactionKind.expense) continue;
-      if (budget.categoryId != null && t.categoryId != budget.categoryId) {
-        continue;
-      }
-      spent += t.amountCents;
-    }
-    return BudgetProgress(budget: budget, spentCents: spent);
-  }
-
-  final Budget budget;
+  final int limitCents;
   final int spentCents;
-
-  int get limitCents => budget.amountCents;
 
   /// Money left to spend (0 once you're over).
   int get leftCents => spentCents >= limitCents ? 0 : limitCents - spentCents;
@@ -43,7 +28,7 @@ class BudgetProgress {
   /// How far over the limit you are (0 if you're not over).
   int get overCents => spentCents > limitCents ? spentCents - limitCents : 0;
 
-  /// 0.0 to 1.0 for the progress bar (stays at 1.0 once you're over).
+  /// 0.0 to 1.0 for a progress bar or ring (stays at 1.0 once you're over).
   double get barFraction =>
       limitCents == 0 ? 0 : (spentCents / limitCents).clamp(0.0, 1.0);
 
@@ -54,4 +39,79 @@ class BudgetProgress {
     if (spentCents * 4 >= limitCents * 3) return BudgetStatus.warning;
     return BudgetStatus.ok;
   }
+}
+
+/// One category's limit plus how much has been spent in it this period.
+class BudgetProgress extends BudgetUsage {
+  const BudgetProgress({
+    required this.category,
+    required super.limitCents,
+    required super.spentCents,
+  });
+
+  /// One [BudgetProgress] for each expense category that has a limit.
+  /// Adds up this period's expenses per category; income and transfers
+  /// never count, and neither do expenses with no category.
+  static List<BudgetProgress> forCategories(
+    List<Category> categories,
+    List<Transaction> month,
+  ) {
+    final spentBy = <String, int>{};
+    for (final t in month) {
+      final id = t.categoryId;
+      if (t.kind != TransactionKind.expense || id == null) continue;
+      spentBy[id] = (spentBy[id] ?? 0) + t.amountCents;
+    }
+    return [
+      for (final c in categories)
+        if (c.kind == TransactionKind.expense && c.budgetCents != null)
+          BudgetProgress(
+            category: c,
+            limitCents: c.budgetCents!,
+            spentCents: spentBy[c.id] ?? 0,
+          ),
+    ];
+  }
+
+  final Category category;
+}
+
+/// All the limits added together, against what was spent in those same
+/// categories. This is what the ring on the Budget page shows.
+class BudgetSummary extends BudgetUsage {
+  const BudgetSummary({
+    required super.limitCents,
+    required super.spentCents,
+    required this.outsideCents,
+  });
+
+  /// Adds up [items]. [month] is every transaction in the period, so the
+  /// spending that is not in any limited category can be worked out too.
+  factory BudgetSummary.compute(
+    List<BudgetProgress> items,
+    List<Transaction> month,
+  ) {
+    var limit = 0;
+    var spent = 0;
+    for (final p in items) {
+      limit += p.limitCents;
+      spent += p.spentCents;
+    }
+    var allExpenses = 0;
+    for (final t in month) {
+      if (t.kind == TransactionKind.expense) allExpenses += t.amountCents;
+    }
+    return BudgetSummary(
+      limitCents: limit,
+      spentCents: spent,
+      outsideCents: allExpenses - spent,
+    );
+  }
+
+  /// Spent in categories that have no limit (or none at all). It is not part
+  /// of the ring, but worth a quiet line so it is not forgotten.
+  final int outsideCents;
+
+  /// False until at least one category has a limit.
+  bool get hasLimits => limitCents > 0;
 }

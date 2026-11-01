@@ -22,16 +22,9 @@ class MoreScreen extends StatelessWidget {
               children: [
                 _MoreRow(
                   icon: Icons.savings_rounded,
-                  label: 'Budgets',
-                  subtitle: 'Spending limits and when they start over',
-                  onTap: () => context.go('/more/budgets'),
-                ),
-                const Divider(height: 1, indent: 56),
-                _MoreRow(
-                  icon: Icons.category_rounded,
-                  label: 'Categories',
-                  subtitle: 'What you spend on and earn from',
-                  onTap: () => context.go('/more/categories'),
+                  label: 'Budget',
+                  subtitle: 'Categories and monthly limits',
+                  onTap: () => context.go('/more/budget'),
                 ),
                 const Divider(height: 1, indent: 56),
                 _MoreRow(

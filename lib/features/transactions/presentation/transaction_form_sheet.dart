@@ -251,12 +251,12 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
               ? lastCategoryId
               : null);
 
-    // This month's budget for each category (shown small inside its pill).
+    // This month's limit for each category (shown small inside its pill).
     final budgetByCategory = <String, BudgetProgress>{
       for (final p
           in ref.watch(budgetProgressProvider).value ??
               const <BudgetProgress>[])
-        if (p.budget.categoryId != null) p.budget.categoryId!: p,
+        p.category.id: p,
     };
 
     // The fields scroll; the Save button stays pinned below them.

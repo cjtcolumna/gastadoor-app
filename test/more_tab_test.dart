@@ -21,12 +21,8 @@ void main() {
             builder: (_, _) => const MoreScreen(),
             routes: [
               GoRoute(
-                path: 'budgets',
-                builder: (_, _) => const Text('Budgets page'),
-              ),
-              GoRoute(
-                path: 'categories',
-                builder: (_, _) => const Text('Categories page'),
+                path: 'budget',
+                builder: (_, _) => const Text('Budget page'),
               ),
               GoRoute(
                 path: 'loans',
@@ -42,18 +38,22 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('lists budgets, categories and loans', (tester) async {
+    testWidgets('lists one Budget row (with categories) and loans', (
+      tester,
+    ) async {
       await pumpMore(tester);
-      expect(find.text('Budgets'), findsOneWidget);
-      expect(find.text('Categories'), findsOneWidget);
+      expect(find.text('Budget'), findsOneWidget);
+      expect(find.text('Categories and monthly limits'), findsOneWidget);
       expect(find.text('Loans'), findsOneWidget);
+      // Categories and budgets used to be two rows; now they are one page.
+      expect(find.text('Budgets'), findsNothing);
+      expect(find.text('Categories'), findsNothing);
     });
 
     testWidgets('each row opens its page, with a way back', (tester) async {
       await pumpMore(tester);
       for (final (row, page) in [
-        ('Budgets', 'Budgets page'),
-        ('Categories', 'Categories page'),
+        ('Budget', 'Budget page'),
         ('Loans', 'Loans page'),
       ]) {
         await tester.tap(find.text(row));
