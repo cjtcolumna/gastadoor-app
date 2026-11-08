@@ -16,6 +16,7 @@ _Category _$CategoryFromJson(Map<String, dynamic> json) => _Category(
   parentId: json['parent_id'] as String?,
   archived: json['archived'] as bool? ?? false,
   isSalary: json['is_salary'] as bool? ?? false,
+  budgetCents: (json['budget_cents'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$CategoryToJson(_Category instance) => <String, dynamic>{
@@ -28,6 +29,7 @@ Map<String, dynamic> _$CategoryToJson(_Category instance) => <String, dynamic>{
   'parent_id': instance.parentId,
   'archived': instance.archived,
   'is_salary': instance.isSalary,
+  'budget_cents': instance.budgetCents,
 };
 
 const _$TransactionKindEnumMap = {

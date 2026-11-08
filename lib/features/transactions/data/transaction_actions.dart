@@ -16,22 +16,26 @@ class TransactionActions {
 
   Future<void> add(TransactionDraft draft) async {
     await _repo.create(draft);
-    _refreshScreens();
+    refreshScreens();
   }
 
   Future<void> update(String id, TransactionDraft draft) async {
     await _repo.update(id, draft);
-    _refreshScreens();
+    refreshScreens();
   }
 
   Future<void> delete(String id) async {
     await _repo.delete(id);
-    _refreshScreens();
+    refreshScreens();
   }
 
   /// "Invalidate" means: throw away the saved answer and fetch it again
   /// the next time a screen asks.
-  void _refreshScreens() {
+  ///
+  /// Public so a screen can also call it on pull-to-refresh: the database
+  /// adds subscription expenses overnight, and an app that has been open
+  /// since the day before needs to look again.
+  void refreshScreens() {
     _ref.invalidate(accountBalancesProvider);
     // Home totals and budgets both update from this one list of the
     // current budget period.

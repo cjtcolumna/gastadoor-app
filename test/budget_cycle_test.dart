@@ -300,4 +300,52 @@ void main() {
       expect(cycle.summary, 'When I log my salary');
     });
   });
+
+  group('days left', () {
+    final october = BudgetPeriod(
+      start: DateTime(2026, 10, 1),
+      end: DateTime(2026, 10, 31),
+    );
+
+    test('counts today, so the last day is 1', () {
+      expect(daysLeftIn(october, DateTime(2026, 10, 31)), 1);
+      expect(daysLeftIn(october, DateTime(2026, 10, 30)), 2);
+      expect(daysLeftIn(october, DateTime(2026, 10, 1)), 31);
+    });
+
+    test('the time of day does not matter', () {
+      expect(daysLeftIn(october, DateTime(2026, 10, 20, 23, 59)), 12);
+      expect(daysLeftIn(october, DateTime(2026, 10, 20, 0, 1)), 12);
+    });
+
+    test('is 0 once the period is over', () {
+      expect(daysLeftIn(october, DateTime(2026, 11, 1)), 0);
+      expect(daysLeftIn(october, DateTime(2026, 12, 25)), 0);
+    });
+
+    test('counts correctly across a clock change', () {
+      // Daylight saving makes some days 23 or 25 hours long.
+      final march = BudgetPeriod(
+        start: DateTime(2026, 3, 1),
+        end: DateTime(2026, 3, 31),
+      );
+      expect(daysLeftIn(march, DateTime(2026, 3, 1)), 31);
+      expect(daysLeftIn(march, DateTime(2026, 3, 29)), 3);
+    });
+
+    test('a period with no planned end has no count', () {
+      final open = BudgetPeriod(
+        start: DateTime(2026, 10, 15),
+        end: DateTime(2026, 10, 20),
+        isOpen: true,
+      );
+      expect(daysLeftIn(open, DateTime(2026, 10, 20)), isNull);
+    });
+
+    test('says "day" for one and "days" for the rest', () {
+      expect(daysLeftText(1), '1 day left');
+      expect(daysLeftText(12), '12 days left');
+      expect(daysLeftText(0), '0 days left');
+    });
+  });
 }

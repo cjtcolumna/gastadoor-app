@@ -20,6 +20,7 @@ import '../data/transaction_actions.dart';
 import '../data/transactions_repository.dart';
 import '../domain/transaction.dart';
 import '../domain/transaction_draft.dart';
+import 'kind_switch.dart';
 
 /// Opens the add/edit form for an expense, income, or transfer.
 /// Pass [existing] to edit it, or leave it null to add a new one.
@@ -250,12 +251,12 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
               ? lastCategoryId
               : null);
 
-    // This month's budget for each category (shown small inside its pill).
+    // This month's limit for each category (shown small inside its pill).
     final budgetByCategory = <String, BudgetProgress>{
       for (final p
           in ref.watch(budgetProgressProvider).value ??
               const <BudgetProgress>[])
-        if (p.budget.categoryId != null) p.budget.categoryId!: p,
+        p.category.id: p,
     };
 
     // The fields scroll; the Save button stays pinned below them.
@@ -276,14 +277,20 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
                     style: theme.textTheme.titleLarge,
                   ),
                   const SizedBox(height: 16),
-                  _KindSwitch(
+                  KindSwitch(
                     kind: _kind,
                     onChanged: _saving ? null : _changeKind,
                   ),
                   const SizedBox(height: 16),
                   AmountHeroField(
                     controller: _amountController,
-                    color: theme.colorScheme.onSurface,
+                    // Red for expense, green for income, blue for transfer
+                    // (the same colors as the switch above).
+                    color: switch (_kind) {
+                      TransactionKind.expense => context.appColors.expense,
+                      TransactionKind.income => context.appColors.income,
+                      TransactionKind.transfer => context.appColors.transfer,
+                    },
                     autofocus: !_isEditing,
                     enabled: !_saving,
                   ),
@@ -407,59 +414,6 @@ class _TransactionFormSheetState extends ConsumerState<TransactionFormSheet> {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Expense | Income | Transfer toggle.
-class _KindSwitch extends StatelessWidget {
-  const _KindSwitch({required this.kind, required this.onChanged});
-
-  final TransactionKind kind;
-  final ValueChanged<TransactionKind>? onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final money = context.appColors;
-    // Red for expense, green for income, blue for transfer.
-    final (color, soft) = switch (kind) {
-      TransactionKind.expense => (money.expense, money.expenseSoft),
-      TransactionKind.income => (money.income, money.incomeSoft),
-      TransactionKind.transfer => (money.transfer, money.transferSoft),
-    };
-
-    return SegmentedButton<TransactionKind>(
-      segments: const [
-        ButtonSegment(
-          value: TransactionKind.expense,
-          label: Text('Expense'),
-          // Same icons as Home and History: ↗ out, ↙ in, ⇄ between.
-          icon: Icon(Icons.north_east_rounded),
-        ),
-        ButtonSegment(
-          value: TransactionKind.income,
-          label: Text('Income'),
-          icon: Icon(Icons.south_west_rounded),
-        ),
-        ButtonSegment(
-          value: TransactionKind.transfer,
-          label: Text('Transfer'),
-          icon: Icon(Icons.swap_horiz_rounded),
-        ),
-      ],
-      selected: {kind},
-      // Keep each side's own icon when selected (no check mark swap).
-      showSelectedIcon: false,
-      style: SegmentedButton.styleFrom(
-        selectedBackgroundColor: soft,
-        selectedForegroundColor: color,
-        // Three tabs on a phone: keep them snug so the words fit.
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        visualDensity: VisualDensity.compact,
-      ),
-      onSelectionChanged: onChanged == null
-          ? null
-          : (selection) => onChanged!(selection.first),
     );
   }
 }

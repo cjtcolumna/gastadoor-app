@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gastadoor/core/theme/app_icons.dart';
 import 'package:gastadoor/features/categories/domain/default_categories.dart';
 import 'package:gastadoor/features/categories/presentation/category_visuals.dart';
 
@@ -8,7 +9,7 @@ void main() {
 
   test('every starter category uses an icon and color that exist', () {
     for (final c in defaultCategories) {
-      expect(categoryIcons, contains(c.icon), reason: '${c.name} icon');
+      expect(appIcons, contains(c.icon), reason: '${c.name} icon');
       expect(categoryColors, contains(c.color), reason: '${c.name} color');
     }
   });
@@ -16,6 +17,44 @@ void main() {
   test('known names turn into Flutter icons and colors', () {
     expect(categoryIconFor('restaurant'), Icons.restaurant_rounded);
     expect(categoryColorFor('orange', scheme), const Color(0xFFEF6C00));
+  });
+
+  test('lipstick is offered', () {
+    expect(appIcons, contains('lipstick'));
+    expect(categoryIconFor('lipstick'), Icons.face_retouching_natural_rounded);
+  });
+
+  test('school and movie are no longer offered', () {
+    for (final removed in ['school', 'movie']) {
+      expect(appIcons, isNot(contains(removed)), reason: removed);
+    }
+  });
+
+  test('the grocery cart is offered', () {
+    expect(appIcons, contains('groceries'));
+    expect(categoryIconFor('groceries'), Icons.local_grocery_store_rounded);
+  });
+
+  test('the shopping bag is offered again, next to the cart', () {
+    expect(categoryIconFor('shopping'), Icons.shopping_bag_rounded);
+    expect(categoryIconFor('shopping'), isNot(categoryIconFor('groceries')));
+  });
+
+  test('the starter Shopping category uses the cart', () {
+    final shopping = defaultCategories.firstWhere((c) => c.name == 'Shopping');
+    expect(shopping.icon, 'groceries');
+  });
+
+  test('a category that saved another removed icon shows the tag icon', () {
+    // Nothing breaks: it just looks plain until you pick a new icon.
+    for (final removed in ['school', 'movie']) {
+      expect(categoryIconFor(removed), Icons.label_outline_rounded);
+    }
+  });
+
+  test('the gift icon is a gift box, not the old card', () {
+    expect(categoryIconFor('gift'), Icons.redeem_rounded);
+    expect(categoryIconFor('gift'), isNot(Icons.card_giftcard_rounded));
   });
 
   test('unknown names, old emojis, and null get safe fallbacks', () {

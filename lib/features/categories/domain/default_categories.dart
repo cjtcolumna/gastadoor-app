@@ -36,7 +36,7 @@ const defaultCategories = <DefaultCategory>[
   (
     name: 'Shopping',
     kind: TransactionKind.expense,
-    icon: 'shopping',
+    icon: 'groceries',
     color: 'pink',
   ),
   (name: 'Health', kind: TransactionKind.expense, icon: 'health', color: 'red'),

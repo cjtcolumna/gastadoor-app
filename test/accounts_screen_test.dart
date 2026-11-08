@@ -67,6 +67,9 @@ class FakeActions implements TransactionActions {
 
   @override
   Future<void> delete(String id) async {}
+
+  @override
+  void refreshScreens() {}
 }
 
 const oldWallet = Account(
@@ -381,7 +384,7 @@ void main() {
       expect(find.text('Inside GoTyme'), findsOneWidget);
 
       await tester.enterText(field('Name'), 'Travel');
-      await tapVisible(tester, find.bySemanticsLabel('flight icon'));
+      await tapVisible(tester, find.bySemanticsLabel('flight'));
       await tester.enterText(field('Goal (optional)'), '20,000');
       await tester.enterText(field('Starting balance'), '500');
       await tapVisible(tester, saveButton('Add sub-account'));

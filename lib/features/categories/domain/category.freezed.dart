@@ -18,7 +18,9 @@ mixin _$Category {
 
  String get id; String get userId; String get name; TransactionKind get kind; String? get icon; String? get color; String? get parentId; bool get archived;/// True for the one Salary category every user has. It is needed for
 /// the budget cycle, so it can't be archived or deleted.
- bool get isSalary;
+ bool get isSalary;/// The monthly spending limit in cents, or null when there is none.
+/// Only expense categories can have one.
+ int? get budgetCents;
 /// Create a copy of Category
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -32,20 +34,20 @@ $CategoryCopyWith<Category> get copyWith => _$CategoryCopyWithImpl<Category>(thi
 @override
 bool operator ==(Object other) {
   final _this = this as Category;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Category&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.userId, _this.userId) || other.userId == _this.userId)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.kind, _this.kind) || other.kind == _this.kind)&&(identical(other.icon, _this.icon) || other.icon == _this.icon)&&(identical(other.color, _this.color) || other.color == _this.color)&&(identical(other.parentId, _this.parentId) || other.parentId == _this.parentId)&&(identical(other.archived, _this.archived) || other.archived == _this.archived)&&(identical(other.isSalary, _this.isSalary) || other.isSalary == _this.isSalary));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Category&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.userId, _this.userId) || other.userId == _this.userId)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.kind, _this.kind) || other.kind == _this.kind)&&(identical(other.icon, _this.icon) || other.icon == _this.icon)&&(identical(other.color, _this.color) || other.color == _this.color)&&(identical(other.parentId, _this.parentId) || other.parentId == _this.parentId)&&(identical(other.archived, _this.archived) || other.archived == _this.archived)&&(identical(other.isSalary, _this.isSalary) || other.isSalary == _this.isSalary)&&(identical(other.budgetCents, _this.budgetCents) || other.budgetCents == _this.budgetCents));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Category;
-  return Object.hash(runtimeType,_this.id,_this.userId,_this.name,_this.kind,_this.icon,_this.color,_this.parentId,_this.archived,_this.isSalary);
+  return Object.hash(runtimeType,_this.id,_this.userId,_this.name,_this.kind,_this.icon,_this.color,_this.parentId,_this.archived,_this.isSalary,_this.budgetCents);
 }
 
 @override
 String toString() {
   final _this = this as Category;
-  return 'Category(id: ${_this.id}, userId: ${_this.userId}, name: ${_this.name}, kind: ${_this.kind}, icon: ${_this.icon}, color: ${_this.color}, parentId: ${_this.parentId}, archived: ${_this.archived}, isSalary: ${_this.isSalary})';
+  return 'Category(id: ${_this.id}, userId: ${_this.userId}, name: ${_this.name}, kind: ${_this.kind}, icon: ${_this.icon}, color: ${_this.color}, parentId: ${_this.parentId}, archived: ${_this.archived}, isSalary: ${_this.isSalary}, budgetCents: ${_this.budgetCents})';
 }
 
 
@@ -56,7 +58,7 @@ abstract mixin class $CategoryCopyWith<$Res>  {
   factory $CategoryCopyWith(Category value, $Res Function(Category) _then) = _$CategoryCopyWithImpl;
 @useResult
 $Res call({
- String id, String userId, String name, TransactionKind kind, String? icon, String? color, String? parentId, bool archived, bool isSalary
+ String id, String userId, String name, TransactionKind kind, String? icon, String? color, String? parentId, bool archived, bool isSalary, int? budgetCents
 });
 
 
@@ -73,7 +75,7 @@ class _$CategoryCopyWithImpl<$Res>
 
 /// Create a copy of Category
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? userId = null,Object? name = null,Object? kind = null,Object? icon = freezed,Object? color = freezed,Object? parentId = freezed,Object? archived = null,Object? isSalary = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? userId = null,Object? name = null,Object? kind = null,Object? icon = freezed,Object? color = freezed,Object? parentId = freezed,Object? archived = null,Object? isSalary = null,Object? budgetCents = freezed,}) {
   return _then(Category(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
@@ -84,7 +86,8 @@ as String?,color: freezed == color ? _self.color : color // ignore: cast_nullabl
 as String?,parentId: freezed == parentId ? _self.parentId : parentId // ignore: cast_nullable_to_non_nullable
 as String?,archived: null == archived ? _self.archived : archived // ignore: cast_nullable_to_non_nullable
 as bool,isSalary: null == isSalary ? _self.isSalary : isSalary // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,budgetCents: freezed == budgetCents ? _self.budgetCents : budgetCents // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 
@@ -169,10 +172,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String userId,  String name,  TransactionKind kind,  String? icon,  String? color,  String? parentId,  bool archived,  bool isSalary)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String userId,  String name,  TransactionKind kind,  String? icon,  String? color,  String? parentId,  bool archived,  bool isSalary,  int? budgetCents)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Category() when $default != null:
-return $default(_that.id,_that.userId,_that.name,_that.kind,_that.icon,_that.color,_that.parentId,_that.archived,_that.isSalary);case _:
+return $default(_that.id,_that.userId,_that.name,_that.kind,_that.icon,_that.color,_that.parentId,_that.archived,_that.isSalary,_that.budgetCents);case _:
   return orElse();
 
 }
@@ -190,10 +193,10 @@ return $default(_that.id,_that.userId,_that.name,_that.kind,_that.icon,_that.col
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String userId,  String name,  TransactionKind kind,  String? icon,  String? color,  String? parentId,  bool archived,  bool isSalary)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String userId,  String name,  TransactionKind kind,  String? icon,  String? color,  String? parentId,  bool archived,  bool isSalary,  int? budgetCents)  $default,) {final _that = this;
 switch (_that) {
 case _Category():
-return $default(_that.id,_that.userId,_that.name,_that.kind,_that.icon,_that.color,_that.parentId,_that.archived,_that.isSalary);case _:
+return $default(_that.id,_that.userId,_that.name,_that.kind,_that.icon,_that.color,_that.parentId,_that.archived,_that.isSalary,_that.budgetCents);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -210,10 +213,10 @@ return $default(_that.id,_that.userId,_that.name,_that.kind,_that.icon,_that.col
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String userId,  String name,  TransactionKind kind,  String? icon,  String? color,  String? parentId,  bool archived,  bool isSalary)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String userId,  String name,  TransactionKind kind,  String? icon,  String? color,  String? parentId,  bool archived,  bool isSalary,  int? budgetCents)?  $default,) {final _that = this;
 switch (_that) {
 case _Category() when $default != null:
-return $default(_that.id,_that.userId,_that.name,_that.kind,_that.icon,_that.color,_that.parentId,_that.archived,_that.isSalary);case _:
+return $default(_that.id,_that.userId,_that.name,_that.kind,_that.icon,_that.color,_that.parentId,_that.archived,_that.isSalary,_that.budgetCents);case _:
   return null;
 
 }
@@ -225,7 +228,7 @@ return $default(_that.id,_that.userId,_that.name,_that.kind,_that.icon,_that.col
 @JsonSerializable()
 
 class _Category implements Category {
-  const _Category({required this.id, required this.userId, required this.name, required this.kind, this.icon, this.color, this.parentId, this.archived = false, this.isSalary = false});
+  const _Category({required this.id, required this.userId, required this.name, required this.kind, this.icon, this.color, this.parentId, this.archived = false, this.isSalary = false, this.budgetCents});
   factory _Category.fromJson(Map<String, dynamic> json) => _$CategoryFromJson(json);
 
 @override final  String id;
@@ -239,6 +242,9 @@ class _Category implements Category {
 /// True for the one Salary category every user has. It is needed for
 /// the budget cycle, so it can't be archived or deleted.
 @override@JsonKey() final  bool isSalary;
+/// The monthly spending limit in cents, or null when there is none.
+/// Only expense categories can have one.
+@override final  int? budgetCents;
 
 /// Create a copy of Category
 /// with the given fields replaced by the non-null parameter values.
@@ -253,18 +259,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Category&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.name, name) || other.name == name)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.icon, icon) || other.icon == icon)&&(identical(other.color, color) || other.color == color)&&(identical(other.parentId, parentId) || other.parentId == parentId)&&(identical(other.archived, archived) || other.archived == archived)&&(identical(other.isSalary, isSalary) || other.isSalary == isSalary));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Category&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.name, name) || other.name == name)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.icon, icon) || other.icon == icon)&&(identical(other.color, color) || other.color == color)&&(identical(other.parentId, parentId) || other.parentId == parentId)&&(identical(other.archived, archived) || other.archived == archived)&&(identical(other.isSalary, isSalary) || other.isSalary == isSalary)&&(identical(other.budgetCents, budgetCents) || other.budgetCents == budgetCents));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,userId,name,kind,icon,color,parentId,archived,isSalary);
+    return Object.hash(runtimeType,id,userId,name,kind,icon,color,parentId,archived,isSalary,budgetCents);
 }
 
 @override
 String toString() {
-    return 'Category(id: $id, userId: $userId, name: $name, kind: $kind, icon: $icon, color: $color, parentId: $parentId, archived: $archived, isSalary: $isSalary)';
+    return 'Category(id: $id, userId: $userId, name: $name, kind: $kind, icon: $icon, color: $color, parentId: $parentId, archived: $archived, isSalary: $isSalary, budgetCents: $budgetCents)';
 }
 
 
@@ -275,7 +281,7 @@ abstract mixin class _$CategoryCopyWith<$Res> implements $CategoryCopyWith<$Res>
   factory _$CategoryCopyWith(_Category value, $Res Function(_Category) _then) = __$CategoryCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String userId, String name, TransactionKind kind, String? icon, String? color, String? parentId, bool archived, bool isSalary
+ String id, String userId, String name, TransactionKind kind, String? icon, String? color, String? parentId, bool archived, bool isSalary, int? budgetCents
 });
 
 
@@ -292,7 +298,7 @@ class __$CategoryCopyWithImpl<$Res>
 
 /// Create a copy of Category
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? userId = null,Object? name = null,Object? kind = null,Object? icon = freezed,Object? color = freezed,Object? parentId = freezed,Object? archived = null,Object? isSalary = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? userId = null,Object? name = null,Object? kind = null,Object? icon = freezed,Object? color = freezed,Object? parentId = freezed,Object? archived = null,Object? isSalary = null,Object? budgetCents = freezed,}) {
   return _then(_Category(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
@@ -303,7 +309,8 @@ as String?,color: freezed == color ? _self.color : color // ignore: cast_nullabl
 as String?,parentId: freezed == parentId ? _self.parentId : parentId // ignore: cast_nullable_to_non_nullable
 as String?,archived: null == archived ? _self.archived : archived // ignore: cast_nullable_to_non_nullable
 as bool,isSalary: null == isSalary ? _self.isSalary : isSalary // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,budgetCents: freezed == budgetCents ? _self.budgetCents : budgetCents // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 

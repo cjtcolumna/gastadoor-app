@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/money.dart';
+import '../../../core/widgets/icon_grid.dart';
+import '../../../core/widgets/money_text_field.dart';
 import '../../transactions/domain/transaction.dart';
+import '../../transactions/presentation/kind_switch.dart';
 import '../data/categories_repository.dart';
 import '../domain/category.dart';
 import 'category_visuals.dart';
@@ -42,8 +47,16 @@ class _CategoryFormSheetState extends ConsumerState<CategoryFormSheet> {
   late final _nameController = TextEditingController(
     text: widget.existing?.name,
   );
+  late final _limitController = TextEditingController(
+    text: widget.existing?.budgetCents == null
+        ? ''
+        : Money.toInputText(widget.existing!.budgetCents!),
+  );
   late TransactionKind _kind = widget.existing?.kind ?? widget.initialKind;
-  late String _icon = _known(widget.existing?.icon, categoryIcons, 'category');
+  late String _icon = knownIconName(
+    widget.existing?.icon,
+    fallback: 'category',
+  );
   late String _color = _known(widget.existing?.color, categoryColors, 'blue');
   bool _saving = false;
   String? _error;
@@ -60,19 +73,41 @@ class _CategoryFormSheetState extends ConsumerState<CategoryFormSheet> {
   @override
   void dispose() {
     _nameController.dispose();
+    _limitController.dispose();
     super.dispose();
+  }
+
+  /// The limit in cents, or null when the box is empty. Only expense
+  /// categories have a limit, so income always gives null.
+  int? get _limitCents {
+    if (_kind != TransactionKind.expense) return null;
+    final text = _limitController.text.trim();
+    return text.isEmpty ? null : Money.parseToCents(text);
   }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     final actions = ref.read(categoryActionsProvider);
     final name = _nameController.text.trim();
+    final limit = _limitCents;
     final existing = widget.existing;
     await _run(
       () => existing == null
-          ? actions.add(name: name, kind: _kind, icon: _icon, color: _color)
+          ? actions.add(
+              name: name,
+              kind: _kind,
+              icon: _icon,
+              color: _color,
+              budgetCents: limit,
+            )
           : actions.save(
-              existing.copyWith(name: name, icon: _icon, color: _color),
+              // Passing null here removes the limit.
+              existing.copyWith(
+                name: name,
+                icon: _icon,
+                color: _color,
+                budgetCents: limit,
+              ),
             ),
       name,
     );
@@ -85,9 +120,10 @@ class _CategoryFormSheetState extends ConsumerState<CategoryFormSheet> {
       builder: (context) => AlertDialog(
         title: Text('Archive ${category.name}?'),
         content: const Text(
-          'It will be hidden when you add expenses or budgets. '
-          'Past transactions keep it, and you can restore it any time '
-          'from the Archived section.',
+          'It will be hidden when you add transactions, and its monthly '
+          'limit (if it has one) is paused. Past transactions keep it, and '
+          'you can restore it any time from the Archived section on the '
+          'Budget page.',
         ),
         actions: [
           TextButton(
@@ -170,28 +206,28 @@ class _CategoryFormSheetState extends ConsumerState<CategoryFormSheet> {
             // Kind can only be chosen when adding, so old expenses never end
             // up in an income category.
             if (!_isEditing) ...[
-              SegmentedButton<TransactionKind>(
-                segments: const [
-                  ButtonSegment(
-                    value: TransactionKind.expense,
-                    label: Text('Expense'),
-                    icon: Icon(Icons.north_east_rounded),
-                  ),
-                  ButtonSegment(
-                    value: TransactionKind.income,
-                    label: Text('Income'),
-                    icon: Icon(Icons.south_west_rounded),
-                  ),
-                ],
-                selected: {_kind},
-                showSelectedIcon: false,
-                onSelectionChanged: _saving
+              KindSwitch(
+                kind: _kind,
+                kinds: const [TransactionKind.expense, TransactionKind.income],
+                onChanged: _saving
                     ? null
-                    : (s) => setState(() => _kind = s.first),
+                    : (kind) => setState(() => _kind = kind),
+              ),
+            ],
+            // Only spending can have a limit. Income has none.
+            if (_kind == TransactionKind.expense) ...[
+              const SizedBox(height: 16),
+              MoneyTextField(
+                controller: _limitController,
+                label: 'Monthly limit (optional)',
+                helperText: 'Leave empty for no limit.',
+                required: false,
+                mustBePositive: true,
+                enabled: !_saving,
               ),
             ],
             const _Label('Icon'),
-            _IconGrid(
+            IconGrid(
               selected: _icon,
               color: categoryColorFor(_color, theme.colorScheme),
               onChanged: _saving ? null : (i) => setState(() => _icon = i),
@@ -257,61 +293,6 @@ class _Label extends StatelessWidget {
           color: theme.colorScheme.onSurfaceVariant,
         ),
       ),
-    );
-  }
-}
-
-/// Every icon from the lookup table, as tappable circles.
-class _IconGrid extends StatelessWidget {
-  const _IconGrid({
-    required this.selected,
-    required this.color,
-    required this.onChanged,
-  });
-
-  final String selected;
-  final Color color;
-  final ValueChanged<String>? onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final MapEntry(key: name, value: icon) in categoryIcons.entries)
-          Semantics(
-            label: name,
-            selected: name == selected,
-            button: true,
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: onChanged == null ? null : () => onChanged!(name),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: name == selected
-                      ? color.withValues(alpha: 0.16)
-                      : Colors.transparent,
-                  border: Border.all(
-                    color: name == selected ? color : context.appColors.border,
-                    width: name == selected ? 2 : 1,
-                  ),
-                ),
-                child: Icon(
-                  icon,
-                  size: 22,
-                  color: name == selected
-                      ? color
-                      : Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-          ),
-      ],
     );
   }
 }

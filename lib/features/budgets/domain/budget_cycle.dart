@@ -206,3 +206,19 @@ String periodLabel(BudgetPeriod period) {
 String periodPhrase(BudgetPeriod period) => period.isOpen
     ? 'since ${DateFormat.MMMd().format(period.start)}'
     : 'for ${periodLabel(period)}';
+
+/// Days left in [period], counting [today] itself, so the last day is 1.
+/// Null for a period with no planned end (it lasts until the next salary).
+/// 0 once the period is over.
+int? daysLeftIn(BudgetPeriod period, DateTime today) {
+  if (period.isOpen) return null;
+  // Compare as UTC dates so a daylight-saving change can't make a day 23
+  // or 25 hours long and throw the count off by one.
+  final last = DateTime.utc(period.end.year, period.end.month, period.end.day);
+  final now = DateTime.utc(today.year, today.month, today.day);
+  final days = last.difference(now).inDays + 1;
+  return days < 0 ? 0 : days;
+}
+
+/// "12 days left" or "1 day left".
+String daysLeftText(int days) => days == 1 ? '1 day left' : '$days days left';

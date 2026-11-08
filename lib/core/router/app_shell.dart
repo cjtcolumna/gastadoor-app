@@ -20,9 +20,14 @@ const appTabs = [
     icon: Icons.receipt_long_rounded,
     selectedIcon: Icons.receipt_long_rounded,
   ),
+  NavTab(
+    label: 'More',
+    icon: Icons.grid_view_rounded,
+    selectedIcon: Icons.grid_view_rounded,
+  ),
 ];
 
-/// The frame around the three tabs: the current tab's screen,
+/// The frame around the four tabs: the current tab's screen,
 /// with the floating tab bar on top of it at the bottom.
 class AppShell extends StatelessWidget {
   const AppShell({super.key, required this.navigationShell});

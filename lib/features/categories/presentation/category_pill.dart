@@ -174,7 +174,7 @@ class NewCategoryPill extends StatelessWidget {
 }
 
 /// Green while the budget is fine, amber from 75% used, red once it is over.
-/// (The same statuses as the Budgets screen.)
+/// (The same statuses as the Budget page.)
 Color _statusColor(BuildContext context, BudgetProgress budget) {
   final colors = context.appColors;
   return switch (budget.status) {
@@ -195,6 +195,7 @@ class BudgetRing extends StatelessWidget {
     this.progress,
     this.color,
     this.size = 26,
+    this.strokeWidth = BudgetRingPainter.defaultStrokeWidth,
   });
 
   final Widget child;
@@ -203,6 +204,10 @@ class BudgetRing extends StatelessWidget {
   final double? progress;
   final Color? color;
   final double size;
+
+  /// How thick the ring is. The big ring on the Budget page uses a thicker
+  /// one than the tiny rings in the category pills.
+  final double strokeWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -216,6 +221,7 @@ class BudgetRing extends StatelessWidget {
                 progress: progress,
                 color: color ?? Theme.of(context).colorScheme.primary,
                 trackColor: context.appColors.border,
+                strokeWidth: strokeWidth,
               ),
         child: Center(child: child),
       ),
@@ -230,13 +236,15 @@ class BudgetRingPainter extends CustomPainter {
     required this.progress,
     required this.color,
     required this.trackColor,
+    this.strokeWidth = defaultStrokeWidth,
   });
 
   final double progress;
   final Color color;
   final Color trackColor;
+  final double strokeWidth;
 
-  static const strokeWidth = 2.5;
+  static const defaultStrokeWidth = 2.5;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -263,5 +271,6 @@ class BudgetRingPainter extends CustomPainter {
   bool shouldRepaint(BudgetRingPainter old) =>
       old.progress != progress ||
       old.color != color ||
-      old.trackColor != trackColor;
+      old.trackColor != trackColor ||
+      old.strokeWidth != strokeWidth;
 }

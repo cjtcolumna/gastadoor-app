@@ -10,7 +10,6 @@ import 'package:gastadoor/features/accounts/data/accounts_provider.dart';
 import 'package:gastadoor/features/accounts/domain/account.dart';
 import 'package:gastadoor/features/accounts/presentation/account_picker_cards.dart';
 import 'package:gastadoor/features/budgets/data/budgets_provider.dart';
-import 'package:gastadoor/features/budgets/domain/budget.dart';
 import 'package:gastadoor/features/budgets/domain/budget_progress.dart';
 import 'package:gastadoor/features/categories/data/categories_repository.dart';
 import 'package:gastadoor/features/categories/presentation/category_pill.dart';
@@ -58,6 +57,9 @@ class FakeActions implements TransactionActions {
 
   @override
   Future<void> delete(String id) async => deleted.add(id);
+
+  @override
+  void refreshScreens() {}
 }
 
 const categories = [
@@ -641,16 +643,18 @@ void main() {
     expect(border().color.a, 1);
   });
 
-  testWidgets('the amount is not colored by type', (tester) async {
+  testWidgets('the amount is red for expense, green for income, blue for '
+      'transfer', (tester) async {
     await openSheet(tester);
+    final colors = tester.element(find.byType(AmountHeroField)).appColors;
     Color amountColor() =>
         tester.widget<AmountHeroField>(find.byType(AmountHeroField)).color;
 
-    final expense = amountColor();
+    expect(amountColor(), colors.expense);
     await tapVisible(tester, find.text('Income'));
-    expect(amountColor(), expense);
+    expect(amountColor(), colors.income);
     await tapVisible(tester, find.text('Transfer'));
-    expect(amountColor(), expense);
+    expect(amountColor(), colors.transfer);
   });
 
   testWidgets('starts on the category used last time', (tester) async {
@@ -732,14 +736,8 @@ void main() {
 
   BudgetProgress foodBudget({required int spent, required int limit}) =>
       BudgetProgress(
-        budget: Budget(
-          id: 'b1',
-          userId: 'u',
-          categoryId: 'food',
-          name: 'Food',
-          amountCents: limit,
-          startsOn: DateTime(2026, 10, 1),
-        ),
+        category: categories.first.copyWith(budgetCents: limit),
+        limitCents: limit,
         spentCents: spent,
       );
 
@@ -875,7 +873,7 @@ void main() {
         userId: 'u',
         name: 'Fun',
         kind: TransactionKind.expense,
-        icon: 'movie',
+        icon: 'pets',
         color: 'pink',
       ),
       Category(

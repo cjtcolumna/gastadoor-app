@@ -20,6 +20,10 @@ abstract class Category with _$Category {
     /// True for the one Salary category every user has. It is needed for
     /// the budget cycle, so it can't be archived or deleted.
     @Default(false) bool isSalary,
+
+    /// The monthly spending limit in cents, or null when there is none.
+    /// Only expense categories can have one.
+    int? budgetCents,
   }) = _Category;
 
   factory Category.fromJson(Map<String, dynamic> json) =>
