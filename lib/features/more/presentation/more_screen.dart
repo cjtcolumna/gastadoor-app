@@ -28,6 +28,13 @@ class MoreScreen extends StatelessWidget {
                 ),
                 const Divider(height: 1, indent: 56),
                 _MoreRow(
+                  icon: Icons.autorenew_rounded,
+                  label: 'Subscriptions',
+                  subtitle: 'Charges that repeat',
+                  onTap: () => context.go('/more/subscriptions'),
+                ),
+                const Divider(height: 1, indent: 56),
+                _MoreRow(
                   icon: Icons.handshake_rounded,
                   label: 'Loans',
                   subtitle: 'Money you lent to others',

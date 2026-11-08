@@ -16,7 +16,10 @@ import '../../budgets/domain/budget_cycle.dart';
 import '../../budgets/presentation/budget_home_card.dart';
 import '../../categories/data/categories_repository.dart';
 import '../../loans/presentation/loans_home_card.dart';
+import '../../subscriptions/data/subscriptions_provider.dart';
+import '../../subscriptions/presentation/subscriptions_home_card.dart';
 import 'net_worth_card.dart';
+import '../../transactions/data/transaction_actions.dart';
 import '../../transactions/data/transactions_repository.dart';
 import '../../insights/presentation/spending_breakdown_card.dart';
 import '../../transactions/domain/month_totals.dart';
@@ -30,6 +33,10 @@ class HomeScreen extends ConsumerWidget {
   Future<void> _refresh(WidgetRef ref) async {
     ref.invalidate(accountsProvider);
     ref.invalidate(monthTransactionsProvider);
+    // Subscription expenses are added by the database overnight, so look at
+    // the transactions and the subscriptions again too.
+    ref.read(transactionActionsProvider).refreshScreens();
+    ref.invalidate(subscriptionsProvider);
     await ref.read(accountBalancesProvider.future);
   }
 
@@ -64,6 +71,8 @@ class HomeScreen extends ConsumerWidget {
             const _SpendingSection(),
             const SizedBox(height: 28),
             const BudgetHomeSection(),
+            const SizedBox(height: 28),
+            const SubscriptionsHomeSection(),
             const SizedBox(height: 28),
             const LoansHomeSection(),
             const SizedBox(height: 28),

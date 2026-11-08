@@ -57,6 +57,9 @@ class FakeActions implements TransactionActions {
 
   @override
   Future<void> delete(String id) async => deleted.add(id);
+
+  @override
+  void refreshScreens() {}
 }
 
 const categories = [

@@ -67,6 +67,9 @@ class FakeActions implements TransactionActions {
 
   @override
   Future<void> delete(String id) async {}
+
+  @override
+  void refreshScreens() {}
 }
 
 const oldWallet = Account(

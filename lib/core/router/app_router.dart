@@ -12,6 +12,7 @@ import '../../features/loans/presentation/loan_detail_screen.dart';
 import '../../features/loans/presentation/loans_screen.dart';
 import '../../features/more/presentation/more_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
+import '../../features/subscriptions/presentation/subscriptions_screen.dart';
 import '../../features/transactions/presentation/history_screen.dart';
 import '../supabase/supabase_providers.dart';
 import 'app_shell.dart';
@@ -66,6 +67,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     name: 'budget',
                     builder: (context, state) => const BudgetScreen(),
                   ),
+                  // Opened from Home's Subscriptions section.
+                  _subscriptionsRoute(),
                   // Opened from Home's Loans section. `/loans/:id` is one loan.
                   _loansRoute(),
                   // Opened from Home's Spending section.
@@ -129,6 +132,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     name: 'more-budget',
                     builder: (context, state) => const BudgetScreen(),
                   ),
+                  _subscriptionsRoute(namePrefix: 'more-'),
                   _loansRoute(namePrefix: 'more-'),
                 ],
               ),
@@ -139,6 +143,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+/// The Subscriptions list. Used under both Home and More, like Loans. (Adding
+/// and editing happen in a sheet on this screen, so there is no page per
+/// subscription.)
+GoRoute _subscriptionsRoute({String namePrefix = ''}) => GoRoute(
+  path: 'subscriptions',
+  name: '${namePrefix}subscriptions',
+  builder: (context, state) => const SubscriptionsScreen(),
+);
 
 /// The Loans list and, inside it, one loan (`:id`). Used under both Home
 /// and More, so the same screens work from either tab.
