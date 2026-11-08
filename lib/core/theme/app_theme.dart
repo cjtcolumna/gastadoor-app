@@ -97,6 +97,11 @@ class AppTheme {
   /// The soft grey-white behind everything; cards sit on it in pure white.
   static const background = Color(0xFFF5F7F6);
 
+  /// The light gray behind the chosen option of a segmented button
+  /// (Monthly | Yearly). A few pick their own color instead, like the
+  /// Expense | Income | Transfer switch.
+  static const selectedFill = Color(0xFFE9ECEF);
+
   /// The app's font: modern and friendly, and stays sharp at small sizes.
   /// Must match the `family:` name in pubspec.yaml.
   static const fontFamily = 'PlusJakartaSans';
@@ -197,6 +202,9 @@ class AppTheme {
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: SegmentedButton.styleFrom(
           backgroundColor: Colors.white,
+          // Needed: a theme's backgroundColor replaces Flutter's own "chosen"
+          // color, which would leave the chosen option with no fill at all.
+          selectedBackgroundColor: selectedFill,
           side: BorderSide(color: appColors.border),
         ),
         // If a segmented button ever shows a check mark, make it rounded.
