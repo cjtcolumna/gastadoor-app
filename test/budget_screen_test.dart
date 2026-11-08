@@ -569,7 +569,7 @@ void main() {
       expect(c.budgetCents, 500000); // the limit is untouched
     });
 
-    testWidgets('a category with the old shopping bag edits as the cart', (
+    testWidgets('a category with the shopping bag keeps it when edited', (
       tester,
     ) async {
       await pumpScreen(
@@ -578,8 +578,8 @@ void main() {
       );
       await tapVisible(tester, find.text('Shopping'));
       await tapVisible(tester, save());
-      // Saving moves it to the cart's name, so the old one fades away.
-      expect(actions.saved.single.icon, 'groceries');
+      // The bag is offered again, so saving leaves its name alone.
+      expect(actions.saved.single.icon, 'shopping');
     });
 
     testWidgets('archiving asks first', (tester) async {

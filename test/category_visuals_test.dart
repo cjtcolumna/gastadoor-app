@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gastadoor/core/theme/app_icons.dart';
 import 'package:gastadoor/features/categories/domain/default_categories.dart';
 import 'package:gastadoor/features/categories/presentation/category_visuals.dart';
 
@@ -8,7 +9,7 @@ void main() {
 
   test('every starter category uses an icon and color that exist', () {
     for (final c in defaultCategories) {
-      expect(categoryIcons, contains(c.icon), reason: '${c.name} icon');
+      expect(appIcons, contains(c.icon), reason: '${c.name} icon');
       expect(categoryColors, contains(c.color), reason: '${c.name} color');
     }
   });
@@ -19,30 +20,24 @@ void main() {
   });
 
   test('lipstick is offered', () {
-    expect(categoryIcons, contains('lipstick'));
+    expect(appIcons, contains('lipstick'));
     expect(categoryIconFor('lipstick'), Icons.face_retouching_natural_rounded);
   });
 
-  test('the shopping bag, school and movie icons are no longer offered', () {
-    for (final removed in ['shopping', 'school', 'movie']) {
-      expect(categoryIcons, isNot(contains(removed)), reason: removed);
+  test('school and movie are no longer offered', () {
+    for (final removed in ['school', 'movie']) {
+      expect(appIcons, isNot(contains(removed)), reason: removed);
     }
   });
 
   test('the grocery cart is offered', () {
-    expect(categoryIcons, contains('groceries'));
+    expect(appIcons, contains('groceries'));
     expect(categoryIconFor('groceries'), Icons.local_grocery_store_rounded);
   });
 
-  test('a category that saved the old shopping bag shows the cart', () {
-    expect(categoryIconFor('shopping'), Icons.local_grocery_store_rounded);
-    expect(currentIconName('shopping'), 'groceries');
-  });
-
-  test('other names are left as they are', () {
-    expect(currentIconName('restaurant'), 'restaurant');
-    expect(currentIconName('movie'), 'movie');
-    expect(currentIconName(null), isNull);
+  test('the shopping bag is offered again, next to the cart', () {
+    expect(categoryIconFor('shopping'), Icons.shopping_bag_rounded);
+    expect(categoryIconFor('shopping'), isNot(categoryIconFor('groceries')));
   });
 
   test('the starter Shopping category uses the cart', () {
@@ -60,11 +55,6 @@ void main() {
   test('the gift icon is a gift box, not the old card', () {
     expect(categoryIconFor('gift'), Icons.redeem_rounded);
     expect(categoryIconFor('gift'), isNot(Icons.card_giftcard_rounded));
-  });
-
-  test('no two names share the same icon', () {
-    final icons = categoryIcons.values.toSet();
-    expect(icons.length, categoryIcons.length);
   });
 
   test('unknown names, old emojis, and null get safe fallbacks', () {

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/money.dart';
+import '../../../core/widgets/icon_grid.dart';
 import '../../../core/widgets/money_text_field.dart';
 import '../../transactions/domain/transaction.dart';
 import '../../transactions/presentation/kind_switch.dart';
@@ -51,10 +53,9 @@ class _CategoryFormSheetState extends ConsumerState<CategoryFormSheet> {
         : Money.toInputText(widget.existing!.budgetCents!),
   );
   late TransactionKind _kind = widget.existing?.kind ?? widget.initialKind;
-  late String _icon = _known(
-    currentIconName(widget.existing?.icon),
-    categoryIcons,
-    'category',
+  late String _icon = knownIconName(
+    widget.existing?.icon,
+    fallback: 'category',
   );
   late String _color = _known(widget.existing?.color, categoryColors, 'blue');
   bool _saving = false;
@@ -226,7 +227,7 @@ class _CategoryFormSheetState extends ConsumerState<CategoryFormSheet> {
               ),
             ],
             const _Label('Icon'),
-            _IconGrid(
+            IconGrid(
               selected: _icon,
               color: categoryColorFor(_color, theme.colorScheme),
               onChanged: _saving ? null : (i) => setState(() => _icon = i),
@@ -292,61 +293,6 @@ class _Label extends StatelessWidget {
           color: theme.colorScheme.onSurfaceVariant,
         ),
       ),
-    );
-  }
-}
-
-/// Every icon from the lookup table, as tappable circles.
-class _IconGrid extends StatelessWidget {
-  const _IconGrid({
-    required this.selected,
-    required this.color,
-    required this.onChanged,
-  });
-
-  final String selected;
-  final Color color;
-  final ValueChanged<String>? onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final MapEntry(key: name, value: icon) in categoryIcons.entries)
-          Semantics(
-            label: name,
-            selected: name == selected,
-            button: true,
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: onChanged == null ? null : () => onChanged!(name),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: name == selected
-                      ? color.withValues(alpha: 0.16)
-                      : Colors.transparent,
-                  border: Border.all(
-                    color: name == selected ? color : context.appColors.border,
-                    width: name == selected ? 2 : 1,
-                  ),
-                ),
-                child: Icon(
-                  icon,
-                  size: 22,
-                  color: name == selected
-                      ? color
-                      : Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-          ),
-      ],
     );
   }
 }

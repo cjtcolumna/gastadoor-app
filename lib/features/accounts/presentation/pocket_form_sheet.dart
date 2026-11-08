@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_icons.dart';
 import '../../../core/utils/friendly_error.dart';
 import '../../../core/utils/money.dart';
+import '../../../core/widgets/icon_grid.dart';
 import '../../../core/widgets/money_text_field.dart';
 import '../data/accounts_provider.dart';
 import '../domain/account.dart';
 import '../domain/balances.dart';
 import 'account_form_sheet.dart' show archiveMessage;
-import 'pocket_visuals.dart';
 
 /// Opens the form to add a sub-account inside [parent], or to edit
 /// [pocket] when it's given.
@@ -54,7 +54,7 @@ class _PocketFormSheetState extends ConsumerState<PocketFormSheet> {
         ? ''
         : Money.toInputText(widget.pocket!.openingBalanceCents),
   );
-  late String _icon = widget.pocket?.icon ?? 'savings';
+  late String _icon = knownIconName(widget.pocket?.icon, fallback: 'savings');
   bool _saving = false;
   String? _error;
 
@@ -187,8 +187,9 @@ class _PocketFormSheetState extends ConsumerState<PocketFormSheet> {
               ),
             ),
             const SizedBox(height: 8),
-            _IconPicker(
+            IconGrid(
               selected: _icon,
+              color: theme.colorScheme.primary,
               onChanged: _saving ? null : (i) => setState(() => _icon = i),
             ),
             const SizedBox(height: 20),
@@ -236,52 +237,6 @@ class _PocketFormSheetState extends ConsumerState<PocketFormSheet> {
           ],
         ),
       ),
-    );
-  }
-}
-
-/// A grid of round icon buttons. The picked one is filled green.
-class _IconPicker extends StatelessWidget {
-  const _IconPicker({required this.selected, required this.onChanged});
-
-  final String selected;
-  final ValueChanged<String>? onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final green = Theme.of(context).colorScheme.primary;
-    final soft = context.appColors.incomeSoft;
-
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: [
-        for (final MapEntry(key: name, value: icon) in pocketIcons.entries)
-          Semantics(
-            button: true,
-            selected: name == selected,
-            label: '$name icon',
-            excludeSemantics: true,
-            child: InkResponse(
-              onTap: onChanged == null ? null : () => onChanged!(name),
-              radius: 26,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: name == selected ? green : soft,
-                ),
-                child: Icon(
-                  icon,
-                  size: 24,
-                  color: name == selected ? Colors.white : green,
-                ),
-              ),
-            ),
-          ),
-      ],
     );
   }
 }
