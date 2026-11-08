@@ -8,37 +8,40 @@ import 'package:flutter/material.dart';
 /// Icons must be listed by name like this (not built from numbers saved in
 /// the database) so release builds keep them. Add new ones to this map.
 ///
+/// The pickers show the icons in the order written here, so keep similar
+/// ones next to each other (travel, food, shopping, home, health, fun...).
+///
 /// Taking a name out of this map is safe: something that already saved it
 /// shows its fallback icon (see [appIconFor]) until you pick another.
 /// To give it a replacement instead, list it in [retiredIconNames].
 const appIcons = <String, IconData>{
-  'restaurant': Icons.restaurant_rounded,
-  'groceries': Icons.local_grocery_store_rounded,
-  'shopping': Icons.shopping_bag_rounded,
-  'cafe': Icons.local_cafe_rounded,
   'bus': Icons.directions_bus_rounded,
   'car': Icons.directions_car_rounded,
   'flight': Icons.flight_rounded,
-  'receipt': Icons.receipt_long_rounded,
+  'restaurant': Icons.restaurant_rounded,
+  'cafe': Icons.local_cafe_rounded,
+  'groceries': Icons.local_grocery_store_rounded,
+  'shopping': Icons.shopping_bag_rounded,
   'home': Icons.home_rounded,
+  'receipt': Icons.receipt_long_rounded,
   'phone': Icons.phone_iphone_rounded,
+  'gadget': Icons.devices_rounded,
+  'health': Icons.medical_services_rounded,
+  'emergency': Icons.health_and_safety_rounded,
+  'fitness': Icons.fitness_center_rounded,
   // Flutter's built-in icons have no lipstick, so this is the face with
   // sparkles, the usual "beauty" icon. The saved name stays 'lipstick', so a
   // real lipstick drawing can replace it here later without touching data.
   'lipstick': Icons.face_retouching_natural_rounded,
-  'health': Icons.medical_services_rounded,
-  'emergency': Icons.health_and_safety_rounded,
-  'fitness': Icons.fitness_center_rounded,
   'pets': Icons.pets_rounded,
   'games': Icons.sports_esports_rounded,
-  'gadget': Icons.devices_rounded,
-  'wedding': Icons.favorite_rounded,
   'celebration': Icons.celebration_rounded,
-  'category': Icons.category_rounded,
-  'work': Icons.work_rounded,
+  'wedding': Icons.favorite_rounded,
   // A gift box (the old card-with-ribbon looked like a gift card).
   'gift': Icons.redeem_rounded,
   'savings': Icons.savings_rounded,
+  'work': Icons.work_rounded,
+  'category': Icons.category_rounded,
 };
 
 /// Icon names that are no longer offered, mapped to the icon that now takes
